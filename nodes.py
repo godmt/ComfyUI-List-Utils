@@ -167,7 +167,7 @@ class StringListSlice:
             "required": {
                 "STRING": ("STRING", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": 0}),
+                "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
     
@@ -197,7 +197,7 @@ class ListSlice:
             "required": {
                 "ANY": ("ANY_TYPE", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": 0}),
+                "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
     
@@ -226,7 +226,7 @@ class BatchSlice:
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": 0}),
+                "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
     

@@ -1,3 +1,6 @@
+import itertools
+
+
 # wildcard trick is taken from pythongossss's
 class AnyType(str):
     def __ne__(self, __value: object) -> bool:
@@ -55,6 +58,7 @@ class SplitString:
             "required": {
                 "STRING": ("STRING", {"multiline": True}),
                 "delimiter": ("STRING", {"default": ","}),
+                "splitlines": ("BOOLEAN", {"default": False}),
                 "strip": ("BOOLEAN", {"default": False})
             }
         }
@@ -66,15 +70,25 @@ class SplitString:
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
-    def run(self, STRING: str, delimiter: str, strip: bool):
-        if delimiter == "\\n" or delimiter == "\\r\\n":
+    def run(self, STRING: str, delimiter: str, splitlines: bool, strip: bool):
+        if splitlines:
             string_list = STRING.splitlines()
         else:
-            string_list = STRING.split(delimiter)
+            string_list = [STRING]
+        if delimiter != "":
+            result = [s.split(delimiter) for s in string_list]
+        else:
+            result = string_list
+        # flatten
+        result = list(itertools.chain.from_iterable(result))
+        # strip
         if strip:
-            string_list = [s.strip() for s in string_list]
-        length = len(string_list)
-        return (string_list, string_list, length)
+            result = [s.strip() for s in result]
+        # remove empty
+        result = [x for x in result if x]
+        
+        length = len(result)
+        return (result, result, length)
 
 
 class StringListSelectByIndex:

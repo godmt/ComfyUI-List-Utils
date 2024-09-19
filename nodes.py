@@ -461,7 +461,7 @@ class Pack:
         }
     
     TITLE = "Pack"
-    RETURN_TYPES = ("PACK", )
+    RETURN_TYPES = ("DICT", )
     RETURN_NAMES = ("PACK", )
     FUNCTION = "run"
     CATEGORY = "list_utils"

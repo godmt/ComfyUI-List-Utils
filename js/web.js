@@ -158,6 +158,9 @@ app.registerExtension({
                     if (this.inputs[slot].type === "DICT") {
                         if (event === TypeSlotEvent.Disconnect) {
                             // shrink outputs to 1
+                            if (!this.outputs || this.outputs.length == 0) {
+                                this.addOutput(`${_prefix}_1`, "*")
+                            }
                             this.outputs[0].type = "*"
                             const output_len = this.outputs.length;
                             for (let i = output_len - 1; i > 0; i--) {
@@ -169,7 +172,7 @@ app.registerExtension({
                             let origin_id = app.graph.links[link].origin_id
                             let origin_node = app.graph._nodes.find(n => n.id == origin_id)
                             for (let i = 0; i < 20; i++) {
-                                if (origin_node.type === "Pack") {
+                                if (origin_node.type === "GODMT_Pack") {
                                     break
                                 }
                                 if (origin_node.inputs.length == 0) {

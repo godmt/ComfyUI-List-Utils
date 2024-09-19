@@ -56,9 +56,9 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
 
 
 app.registerExtension({
-    name: "kk.ListUtils",
+    name: "godmt.ListUtils",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "Pack" || nodeData.name === "CreateList" || nodeData.name == "CreateBatch") {
+        if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreateList" || nodeData.name == "GODMT_CreateBatch") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -98,7 +98,7 @@ app.registerExtension({
                 }
                 return me;
             }
-        } else if (nodeData.name === "CreateStringList") {
+        } else if (nodeData.name === "GODMT_CreateStringList") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -138,7 +138,7 @@ app.registerExtension({
                 }
                 return me;
             }
-        } else if (nodeData.name === "Unpack") {
+        } else if (nodeData.name === "GODMT_Unpack") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -200,7 +200,7 @@ app.registerExtension({
                 }
                 return me;
             }
-        } else if (nodeData.name === "GetShape") {
+        } else if (nodeData.name === "GODMT_GetShape") {
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function () {
                 onNodeCreated ? onNodeCreated.apply(this, []) : undefined;

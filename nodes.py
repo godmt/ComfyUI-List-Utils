@@ -167,7 +167,7 @@ class StringListSlice:
             "required": {
                 "STRING": ("STRING", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": -1}),
+                "end": ("INT", {"default": 0}),
             }
         }
     
@@ -182,6 +182,8 @@ class StringListSlice:
     def run(self, STRING: list[str], start: list[int], end: list[int]):
         start = start[0]
         end = end[0]
+        if end == 0:
+            return (STRING[start:], )
         return (STRING[start:end], )
 
 
@@ -195,7 +197,7 @@ class ListSlice:
             "required": {
                 "ANY": ("ANY_TYPE", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": -1}),
+                "end": ("INT", {"default": 0}),
             }
         }
     
@@ -209,6 +211,8 @@ class ListSlice:
     def run(self, ANY: list, start: list[int], end: list[int]):
         start = start[0]
         end = end[0]
+        if end == 0:
+            return (ANY[start:], )
         return (ANY[start:end], )
 
 
@@ -222,7 +226,7 @@ class BatchSlice:
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
                 "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": -1}),
+                "end": ("INT", {"default": 0}),
             }
         }
     
@@ -232,6 +236,8 @@ class BatchSlice:
     CATEGORY = "list_utils"
 
     def run(self, LIST: list, start: int, end: int):
+        if end == 0:
+            return (LIST[start:], )
         return (LIST[start:end], )
 
 

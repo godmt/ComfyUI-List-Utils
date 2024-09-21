@@ -9,6 +9,6 @@ Repository = "https://github.com/godmt/ComfyUI-List-Utils"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "godmt"
 DisplayName = "ComfyUI-List-Utils"
 Icon = ""

@@ -23,7 +23,6 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
     }
     // remove all non connected inputs
     if (event == TypeSlotEvent.Disconnect && node.inputs.length > 1) {
-        console.info(`Removing input ${index} (${node.inputs[index].name})`)
         if (node.widgets) {
             const widget = node.widgets.find((w) => w.name === node.inputs[index].name)
             if (widget) {
@@ -48,8 +47,6 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
         const name = nextIndex < names.length
             ? names[nextIndex]
             : `${prefix}${nextIndex + 1}`
-
-        console.info(`Adding input ${nextIndex + 1} (${name})`)
         node.addInput(name, type)
     }
 }

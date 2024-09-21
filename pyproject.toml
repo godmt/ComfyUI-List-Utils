@@ -1,8 +1,8 @@
 [project]
 name = "comfyui-list-utils"
-description = "NODES:GODMT_SplitString, GODMT_StringListSelectByIndex, GODMT_ListSelectByIndex, GODMT_BatchSelectByIndex, GODMT_StringListSlice, GODMT_ListSlice, GODMT_BatchSlice, GODMT_BatchToStringList, ..."
-version = "1.0.0"
-license = {file = "LICENSE"}
+description = "LIST and BATCH utilities which support: create, convert, get or slice items"
+version = "1.0.1"
+license = { file = "LICENSE" }
 
 [project.urls]
 Repository = "https://github.com/godmt/ComfyUI-List-Utils"

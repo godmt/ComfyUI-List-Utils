@@ -1,3 +1,4 @@
+import numpy as np
 import itertools
 
 
@@ -91,35 +92,7 @@ class SplitString:
         return (result, result, length)
 
 
-class StringListSelectByIndex:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "STRING": ("STRING", {"forceInput": True}),
-                "index": ("INT", {"forceInput": False, "default": 0}),
-            }
-        }
-    
-    TITLE = "String List: Select By Index"
-    RETURN_TYPES = ("STRING", )
-    RETURN_NAMES = ("STRING", )
-    INPUT_IS_LIST = True
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, STRING: list[str], index: list[int]):
-        index = index[0]
-        if index >= len(STRING):
-            print("Error: index out of range")
-            return ("", )
-        return (STRING[index], )
-
-
-class ListSelectByIndex:
+class ListGetByIndex:
     def __init__(self):
         pass
 
@@ -132,7 +105,7 @@ class ListSelectByIndex:
             }
         }
     
-    TITLE = "List: Select By Index"
+    TITLE = "List: Get By Index"
     RETURN_TYPES = (ANY_TYPE, )
     INPUT_IS_LIST = True
     FUNCTION = "run"
@@ -146,7 +119,7 @@ class ListSelectByIndex:
         return (ANY[index], )
 
 
-class BatchSelectByIndex:
+class BatchGetByIndex:
     def __init__(self):
         pass
 
@@ -159,7 +132,7 @@ class BatchSelectByIndex:
             }
         }
     
-    TITLE = "Batch: Select By Index"
+    TITLE = "Batch: Get By Index"
     RETURN_TYPES = (ANY_TYPE, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -171,36 +144,6 @@ class BatchSelectByIndex:
         return (LIST[index], )
 
 
-class StringListSlice:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "STRING": ("STRING", {"forceInput": True}),
-                "start": ("INT", {"default": 0}),
-                "end": ("INT", {"default": 0, "min": -9007199254740991}),
-            }
-        }
-    
-    TITLE = "String List: Slice"
-    RETURN_TYPES = ("STRING", )
-    RETURN_NAMES = ("STRING", )
-    INPUT_IS_LIST = True
-    OUTPUT_IS_LIST = (True, )
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, STRING: list[str], start: list[int], end: list[int]):
-        start = start[0]
-        end = end[0]
-        if end == 0:
-            return (STRING[start:], )
-        return (STRING[start:end], )
-
-
 class ListSlice:
     def __init__(self):
         pass
@@ -209,8 +152,8 @@ class ListSlice:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "ANY": ("ANY_TYPE", {"forceInput": True}),
-                "start": ("INT", {"default": 0}),
+                "ANY": (ANY_TYPE, {"forceInput": True}),
+                "start": ("INT", {"default": 0, "min": -9007199254740991}),
                 "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
@@ -239,7 +182,7 @@ class BatchSlice:
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
-                "start": ("INT", {"default": 0}),
+                "start": ("INT", {"default": 0, "min": -9007199254740991}),
                 "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
@@ -253,53 +196,6 @@ class BatchSlice:
         if end == 0:
             return (LIST[start:], )
         return (LIST[start:end], )
-
-
-class BatchToStringList:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "LIST": ("LIST", ),
-            }
-        }
-    
-    TITLE = "Batch To String List"
-    RETURN_TYPES = ("STRING", )
-    RETURN_NAMES = ("STRING", )
-    OUTPUT_IS_LIST = (True,)
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, LIST: list):
-        str_list = [str(i) for i in LIST]
-        return (str_list, )
-
-
-class StringListToBatch:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "STRING": ("STRING", {"forceInput": True}),
-            }
-        }
-    
-    TITLE = "String List To Batch"
-    RETURN_TYPES = ("LIST", )
-    RETURN_NAMES = ("LIST", )
-    INPUT_IS_LIST = True
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, STRING: list[str]):
-        return (STRING, )
 
 
 class BatchToList:
@@ -443,6 +339,151 @@ class CreateBatch:
         return (output_list, )
 
 
+class MergeList:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {},
+            "optional": {},
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    TITLE = "Merge List"
+    INPUT_IS_LIST = True
+    RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_IS_LIST = (True, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
+        unique_id = unique_id[0]
+        prompt = prompt[0]
+        extra_pnginfo = extra_pnginfo[0]
+        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
+        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
+        output_list = []
+        for k, v in kwargs.items():
+            if k.startswith(PACK_PREFIX):
+                output_list += v
+        return (output_list, )
+
+
+class MergeBatch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {},
+            "optional": {},
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    TITLE = "Merge Batch"
+    RETURN_TYPES = ("LIST", )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
+        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
+        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
+        output_list = []
+        for k, v in kwargs.items():
+            if k.startswith(PACK_PREFIX):
+                output_list += v
+        return (output_list, )
+
+
+class CreateRange:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "start": ("INT", {"default": 0, "min": -9007199254740991}),
+                "stop": ("INT", {"default": 1, "min": -9007199254740991}),
+                "step": ("INT", {"default": 1, "min": -9007199254740991}),
+            },
+        }
+    
+    TITLE = "Create Range"
+    RETURN_TYPES = ("INT", "LIST", "INT")
+    RETURN_NAMES = ("INT", "LIST", "length")
+    OUTPUT_IS_LIST = (True, False, False, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, start: int, stop: int, step: int):
+        range_list = list(range(start, stop, step))
+        return (range_list, range_list, len(range_list))
+
+
+class CreateArange:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "start": ("FLOAT", {"default": 0}),
+                "stop": ("FLOAT", {"default": 1}),
+                "step": ("FLOAT", {"default": 1}),
+            },
+        }
+    
+    TITLE = "Create Arange"
+    RETURN_TYPES = ("FLOAT", "LIST", "INT")
+    RETURN_NAMES = ("FLOAT", "LIST", "length")
+    OUTPUT_IS_LIST = (True, False, False, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, start: float, stop: float, step: float):
+        range_list = list(np.arange(start, stop, step))
+        return (range_list, range_list, len(range_list))
+
+
+class CreateLinspace:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "start": ("FLOAT", {"default": 0}),
+                "stop": ("FLOAT", {"default": 1}),
+                "num": ("INT", {"default": 10, "min": 2}),
+            },
+        }
+    
+    TITLE = "Create Linspace"
+    RETURN_TYPES = ("FLOAT", "LIST", "INT")
+    RETURN_NAMES = ("FLOAT", "LIST", "length")
+    OUTPUT_IS_LIST = (True, False, False, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, start: float, stop: float, num: int):
+        range_list = list(np.linspace(start, stop, num))
+        return (range_list, range_list, len(range_list))
+
+
 PACK_PREFIX = 'value'
 class Pack:
     def __init__(self):
@@ -520,69 +561,6 @@ class Unpack:
             types.append(d["type"])
             outputs.append(d["value"])
         return tuple(outputs)
-
-
-class AnyToDict:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "ANY" : (ANY_TYPE, {}), 
-            },
-        }
-    
-    TITLE = "Any To Dict"
-    RETURN_TYPES = ("DICT", "STRING")
-    RETURN_NAMES = ("DICT", "str()")
-    OUTPUT_NODE = True
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, ANY):
-        if type(ANY) is dict:
-            return (ANY, str(ANY))
-        elif not hasattr(ANY, '__dict__'):
-            print(f"Object of type {type(ANY).__name__} doesn't have a __dict__ attribute")
-            return ({}, str(ANY))
-        else:
-            return (vars(ANY), str(ANY))
-
-
-class GetWidgetsValues:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "ANY" : (ANY_TYPE, {}), 
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "prompt": "PROMPT", 
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
-    
-    TITLE = "Get Widgets Values"
-    RETURN_TYPES = ("LIST", )
-    RETURN_NAMES = ("LIST", )
-    OUTPUT_NODE = True
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, ANY, unique_id, prompt, extra_pnginfo):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        link_id = cur_node["inputs"][0]["link"]
-        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
-        in_node_id, in_socket_id = link[1], link[2]
-        in_node = next(n for n in node_list if n["id"] == in_node_id)
-        return (in_node["widgets_values"], )
 
 
 class GetLength:
@@ -670,25 +648,148 @@ class GetShape:
         return { "ui": {"text": (f"{W}, {H}, {B}, {C}",)}, "result": (W, H, B, C) }
 
 
+class AnyToDict:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "ANY" : (ANY_TYPE, {}), 
+            },
+        }
+    
+    TITLE = "Any To Dict"
+    RETURN_TYPES = ("DICT", "STRING")
+    RETURN_NAMES = ("DICT", "str()")
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, ANY):
+        if type(ANY) is dict:
+            return (ANY, str(ANY))
+        elif not hasattr(ANY, '__dict__'):
+            print(f"Object of type {type(ANY).__name__} doesn't have a __dict__ attribute")
+            return ({}, str(ANY))
+        else:
+            return (vars(ANY), str(ANY))
+
+
+class GetWidgetsValues:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "ANY" : (ANY_TYPE, {}), 
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    TITLE = "Get Widgets Values"
+    RETURN_TYPES = ("LIST", )
+    RETURN_NAMES = ("LIST", )
+    OUTPUT_NODE = True
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, ANY, unique_id, prompt, extra_pnginfo):
+        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
+        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
+        link_id = cur_node["inputs"][0]["link"]
+        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
+        in_node_id, in_socket_id = link[1], link[2]
+        in_node = next(n for n in node_list if n["id"] == in_node_id)
+        return (in_node["widgets_values"], )
+
+
+class AnyCast:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "ANY" : (ANY_TYPE, {}),
+                "TYPE": (["*", "STRING", "INT", "FLOAT", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"], {}),
+            },
+        }
+    
+    TITLE = "Any Cast"
+    RETURN_TYPES = (ANY_TYPE,)
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, ANY, TYPE):
+        result = ANY
+        if TYPE == "STRING":
+            result = str(ANY)
+        elif TYPE == "INT":
+            result = int(ANY)
+        elif TYPE == "FLOAT" or TYPE == "NUMBER":
+            result = float(ANY)
+        return (result, )
+
+
+class BatchItemCast:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "LIST": ("LIST", {"forceInput": True}),
+                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER"], {}),
+            },
+        }
+    
+    TITLE = "Batch Item Cast"
+    RETURN_TYPES = ("LIST", )
+    RETURN_NAMES = ("LIST", )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, LIST: list, TYPE: str):
+        converted_list = []
+        if TYPE == "STRING":
+            converted_list = [str(v) for v in LIST]
+        elif TYPE == "INT":
+            converted_list = [int(v) for v in LIST]
+        elif TYPE == "FLOAT" or TYPE == "NUMBER":
+            converted_list = [float(v) for v in LIST]
+        return (converted_list, )
+
+
 NODE_CLASS_MAPPINGS = {
     "GODMT_SplitString": SplitString,
-    "GODMT_StringListSelectByIndex": StringListSelectByIndex,
-    "GODMT_ListSelectByIndex": ListSelectByIndex,
-    "GODMT_BatchSelectByIndex": BatchSelectByIndex,
-    "GODMT_StringListSlice": StringListSlice,
+    "GODMT_ListGetByIndex": ListGetByIndex,
+    "GODMT_BatchGetByIndex": BatchGetByIndex,
     "GODMT_ListSlice": ListSlice,
     "GODMT_BatchSlice": BatchSlice,
-    "GODMT_BatchToStringList": BatchToStringList,
-    "GODMT_StringListToBatch": StringListToBatch,
-    "GODMT_BatchToList": BatchToList,
     "GODMT_ListToBatch": ListToBatch,
-    "GODMT_CreateStringList": CreateStringList,
+    "GODMT_BatchToList": BatchToList,
     "GODMT_CreateList": CreateList,
     "GODMT_CreateBatch": CreateBatch,
+    "GODMT_MergeList": MergeList,
+    "GODMT_MergeBatch": MergeBatch,
+    "GODMT_CreateRange": CreateRange,
+    "GODMT_CreateArange": CreateArange,
+    "GODMT_CreateLinspace": CreateLinspace,
     "GODMT_Pack": Pack,
     "GODMT_Unpack": Unpack,
-    "GODMT_AnyToDict": AnyToDict,
     "GODMT_GetLength": GetLength,
     "GODMT_GetShape": GetShape,
+    "GODMT_AnyToDict": AnyToDict,
     "GODMT_GetWidgetsValues": GetWidgetsValues,
+    "GODMT_AnyCast": AnyCast,
+    "GODMT_BatchItemCast": BatchItemCast,
 }

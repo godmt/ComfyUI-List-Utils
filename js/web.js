@@ -1,20 +1,20 @@
 // https://gist.github.com/Amorano/9871fb3be1aa75defdfad013e1f95e0e
-import { app } from "../../scripts/app.js";
-// import { api } from "../../scripts/api.js";
-import { ComfyWidgets } from "../../scripts/widgets.js";
-// import { addConnectionLayoutSupport } from "./utils.js";
+import { app } from "../../scripts/app.js"
+// import { api } from "../../scripts/api.js"
+import { ComfyWidgets } from "../../scripts/widgets.js"
+// import { addConnectionLayoutSupport } from "./utils.js"
 
-const _prefix = 'value';
+const _prefix = 'value'
 
 const TypeSlot = {
     Input: 1,
     Output: 2,
-};
+}
 
 const TypeSlotEvent = {
     Connect: true,
     Disconnect: false,
-};
+}
 
 const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', names = []
 ) => {
@@ -51,11 +51,29 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
     }
 }
 
+/**
+ * Get all unique types in the workflow.
+ * @returns {Set} Unique set of all types used in the workflow
+ */
+function getWorkflowTypes(app) {
+    // 実装
+    const types = new Set(["*", "STRING", "INT", "FLOAT", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"])
+    app.graph._nodes.forEach(node => {
+        node.inputs.forEach(slot => {
+            types.add(slot.type)
+        })
+        node.outputs.forEach(slot => {
+            types.add(slot.type)
+        })
+    })
+    return Array.from(types)
+}
+
 
 app.registerExtension({
     name: "godmt.ListUtils",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreateList" || nodeData.name == "GODMT_CreateBatch") {
+        if (nodeData.name === "GODMT_Pack" || nodeData.name == "GODMT_CreateBatch") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -93,13 +111,80 @@ app.registerExtension({
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                     }
                 }
-                return me;
+                return me
             }
-        } else if (nodeData.name === "GODMT_CreateStringList") {
+        } else if (nodeData.name === "GODMT_CreateList" || nodeData.name === "GODMT_MergeList") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`${_prefix}_1`, 'STRING')
+                this.addInput(`${_prefix}_1`, '*')
+                return r
+            }
+
+            // TODO might be buggy on load
+            // on copy, paste, load
+            const onConfigure = nodeType.prototype.onConfigure
+            nodeType.prototype.onConfigure = function () {
+                const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
+                if (!app.configuringGraph && this.inputs) {
+                    const length = this.inputs.length
+                    for (let i = length - 1; i >= 0; i--) {
+                        this.removeInput(i)
+                    }
+                    this.addInput(`${_prefix}_1`, '*')
+                }
+                return r
+            }
+
+            const onConnectionsChange = nodeType.prototype.onConnectionsChange
+            nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
+                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                if (slotType === TypeSlot.Input) {
+                    if (!this.inputs[slot].name.startsWith(_prefix)) {
+                        return
+                    }
+
+                    if (event == TypeSlotEvent.Connect && link_info) {
+                        if (slot == 0) {
+                            const node = app.graph.getNodeById(link_info.origin_id)
+                            const origin_type = node.outputs[link_info.origin_slot].type
+                            this.inputs[0].type = origin_type
+                            this.outputs[0].type = origin_type
+                            this.outputs[0].label = origin_type
+                            this.outputs[0].name = origin_type
+                        }
+                    }
+
+                    // remove all non connected inputs
+                    if (event == TypeSlotEvent.Disconnect && this.inputs.length > 0) {
+                        if (this.widgets) {
+                            const widget = this.widgets.find((w) => w.name === this.inputs[slot].name)
+                            if (widget) {
+                                widget.onRemoved?.()
+                                this.widgets.length = this.widgets.length - 1
+                            }
+                        }
+                        this.removeInput(slot)
+                        // make inputs sequential again
+                        for (let i = 0; i < this.inputs.length; i++) {
+                            this.inputs[i].label = `${_prefix}_${i + 1}`
+                            this.inputs[i].name = `${_prefix}_${i + 1}`
+                        }
+                    }
+
+                    // add an extra input
+                    if (this.inputs[this.inputs.length - 1].link != undefined) {
+                        const nextIndex = this.inputs.length
+                        this.addInput(`${_prefix}_${nextIndex + 1}`, this.inputs[0].type)
+                    }
+                }
+                return me
+            }
+        } else if (nodeData.name == "GODMT_MergeBatch") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeType.prototype.onNodeCreated = function () {
+                const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
+                this.addInput(`${_prefix}_1`, 'LIST')
                 return r
             }
 
@@ -112,7 +197,7 @@ app.registerExtension({
                     for (let i = length - 1; i >= 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`${_prefix}_1`, 'STRING')
+                    this.addInput(`${_prefix}_1`, 'LIST')
                 }
                 return r
             }
@@ -121,7 +206,7 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, 'STRING')
+                    dynamic_connection(this, slot, event, `${_prefix}_`, 'LIST')
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const fromNode = this.graph._nodes.find(
                             (otherNode) => otherNode.id == link_info.origin_id
@@ -129,11 +214,11 @@ app.registerExtension({
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
                     } else if (event === TypeSlotEvent.Disconnect) {
-                        this.inputs[slot].type = 'STRING'
+                        this.inputs[slot].type = 'LIST'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                     }
                 }
-                return me;
+                return me
             }
         } else if (nodeData.name === "GODMT_Unpack") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
@@ -159,7 +244,7 @@ app.registerExtension({
                                 this.addOutput(`${_prefix}_1`, "*")
                             }
                             this.outputs[0].type = "*"
-                            const output_len = this.outputs.length;
+                            const output_len = this.outputs.length
                             for (let i = output_len - 1; i > 0; i--) {
                                 this.removeOutput(i)
                             }
@@ -198,19 +283,86 @@ app.registerExtension({
 
                     }
                 }
-                return me;
+                return me
+            }
+        } else if (nodeData.name == "GODMT_AnyCast") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeType.prototype.onNodeCreated = function () {
+                const me = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
+                const onWidgetChanged = this.widgets[0].callback
+                const thisNode = this
+                this.widgets[0].callback = function () {
+                    const me = onWidgetChanged ? onWidgetChanged.apply(this, arguments) : undefined
+                    const output_type = thisNode.widgets[0].value
+                    thisNode.outputs[0].type = output_type
+                    thisNode.outputs[0].label = output_type
+                    thisNode.outputs[0].name = output_type
+                    return me
+                }
+                return me
+            }
+            // on copy, paste, load
+            const onConfigure = nodeType.prototype.onConfigure
+            nodeType.prototype.onConfigure = function () {
+                const me = onConfigure ? onConfigure.apply(this, arguments) : undefined
+                const output_type = this.widgets[0].value
+                this.outputs[0].type = output_type
+                this.outputs[0].label = output_type
+                this.outputs[0].name = output_type
+                return me
+            }
+            const onConnectionsChange = nodeType.prototype.onConnectionsChange
+            nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
+                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                if (slotType === TypeSlot.Input) {
+                    if (event === TypeSlotEvent.Connect && link_info) {
+                        const origin_node = app.graph.getNodeById(link_info.origin_id)
+                        const origin_slot = origin_node.outputs[link_info.origin_slot]
+                        const origin_type = origin_slot.type
+                        const types = getWorkflowTypes(app)
+                        this.widgets[0].options.values = types
+                        const output_type = this.widgets[0].value
+                        this.outputs[0].type = output_type
+                        this.outputs[0].label = output_type
+                        this.outputs[0].name = origin_type
+                    } else if (event === TypeSlotEvent.Disconnect) {
+                        this.outputs[0].type = "*"
+                        this.outputs[0].label = "*"
+                        this.outputs[0].name = "*"
+                    }
+                }
+                return me
             }
         } else if (nodeData.name === "GODMT_GetShape") {
-            const onNodeCreated = nodeType.prototype.onNodeCreated;
+            const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
-                onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
-                this.showValueWidget = ComfyWidgets["STRING"](this, "WHBC", ["STRING", { multiline: false }], app).widget;
-            };
-            const onExecuted = nodeType.prototype.onExecuted;
+                onNodeCreated ? onNodeCreated.apply(this, []) : undefined
+                this.showValueWidget = ComfyWidgets["STRING"](this, "WHBC", ["STRING", { multiline: false }], app).widget
+            }
+            const onExecuted = nodeType.prototype.onExecuted
             nodeType.prototype.onExecuted = function (message) {
-                onExecuted === null || onExecuted === void 0 ? void 0 : onExecuted.apply(this, [message]);
-                this.showValueWidget.value = message.text[0];
-            };
+                onExecuted === null || onExecuted === void 0 ? void 0 : onExecuted.apply(this, [message])
+                this.showValueWidget.value = message.text[0]
+            }
+        } else if (nodeData.name === "GODMT_ListGetByIndex" || nodeData.name === "GODMT_ListSlice") {
+            const onConnectionsChange = nodeType.prototype.onConnectionsChange
+            nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
+                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                if (slotType === TypeSlot.Input) {
+                    if (event === TypeSlotEvent.Connect && link_info) {
+                        const node = app.graph.getNodeById(link_info.origin_id)
+                        let origin_type = node.outputs[link_info.origin_slot].type
+                        this.outputs[0].type = origin_type
+                        this.outputs[0].label = origin_type
+                        this.outputs[0].name = origin_type
+                    } else if (event === TypeSlotEvent.Disconnect) {
+                        this.outputs[0].type = "*"
+                        this.outputs[0].label = "*"
+                        this.outputs[0].name = "*"
+                    }
+                }
+                return me
+            }
         }
     }
 })

@@ -57,7 +57,7 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
  */
 function getWorkflowTypes(app) {
     // 実装
-    const types = new Set(["*", "STRING", "INT", "FLOAT", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"])
+    const types = new Set(["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"])
     app.graph._nodes.forEach(node => {
         node.inputs.forEach(slot => {
             types.add(slot.type)
@@ -237,33 +237,56 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    if (this.inputs[slot].type === "DICT") {
-                        if (event === TypeSlotEvent.Disconnect) {
-                            // shrink outputs to 1
-                            if (!this.outputs || this.outputs.length == 0) {
-                                this.addOutput(`${_prefix}_1`, "*")
+                    if (event === TypeSlotEvent.Disconnect) {
+                        // shrink outputs to 1
+                        if (!this.outputs || this.outputs.length == 0) {
+                            this.addOutput(`${_prefix}_1`, "*")
+                        }
+                        this.outputs[0].type = "*"
+                        const output_len = this.outputs.length
+                        for (let i = output_len - 1; i > 0; i--) {
+                            this.removeOutput(i)
+                        }
+                    } else if (event === TypeSlotEvent.Connect && link_info) {
+                        // find the origin Pack
+                        const link_id = this.inputs[slot].link
+                        let origin_id = app.graph.links[link_id]?.origin_id
+                        let origin_node = app.graph._nodes.find(n => n.id == origin_id)
+                        for (let i = 0; i < 20; i++) {
+                            if (!origin_node) {
+                                break
                             }
-                            this.outputs[0].type = "*"
-                            const output_len = this.outputs.length
-                            for (let i = output_len - 1; i > 0; i--) {
-                                this.removeOutput(i)
+                            if (origin_node.type === "GODMT_Pack") {
+                                break
                             }
-                        } else if (event === TypeSlotEvent.Connect && link_info) {
-                            // find the origin Pack
-                            let link = this.inputs[slot].link  // link ID?
-                            let origin_id = app.graph.links[link].origin_id
-                            let origin_node = app.graph._nodes.find(n => n.id == origin_id)
-                            for (let i = 0; i < 20; i++) {
-                                if (origin_node.type === "GODMT_Pack") {
+                            if (origin_node.inputs.length == 0) {
+                                console.log("ERROR: Pack node not found")
+                                origin_node = undefined
+                                break
+                            }
+                            let origin_slot = -1
+                            for (let i in origin_node.inputs) {
+                                if (origin_node.inputs[i].type === "PACK") {
+                                    origin_slot = i
                                     break
+                                } else if (origin_node.inputs[i].type === "*") {
+                                    origin_slot = i
                                 }
-                                if (origin_node.inputs.length == 0) {
-                                    break
-                                }
-                                link = origin_node.inputs[0].link
-                                origin_id = app.graph.links[link].origin_id
-                                origin_node = app.graph._nodes.find(n => n.id == origin_id)
                             }
+                            if (origin_slot == -1) {
+                                console.log("ERROR: Pack node not found")
+                                origin_node = undefined
+                                break
+                            }
+
+                            link = origin_node.inputs[origin_slot].link
+                            origin_id = app.graph.links[link]?.origin_id
+                            if (!origin_id) {
+                                break
+                            }
+                            origin_node = app.graph._nodes.find(n => n.id == origin_id)
+                        }
+                        if (origin_node) {
                             const origin_inputs = origin_node.inputs
                             const output_len = origin_inputs.length - 1  // end is empty socket
                             const cur_len = this.outputs.length
@@ -277,10 +300,6 @@ app.registerExtension({
                                 this.outputs[i].type = origin_inputs[i].type
                             }
                         }
-                    }
-                } else if (slotType === TypeSlot.Output) {
-                    if (event === TypeSlotEvent.Connect && link_info) {
-
                     }
                 }
                 return me
@@ -332,6 +351,28 @@ app.registerExtension({
                     }
                 }
                 return me
+            }
+        } else if (nodeData.name === "GODMT_GetWidgetsValues") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeType.prototype.onNodeCreated = function () {
+                onNodeCreated ? onNodeCreated.apply(this, []) : undefined
+                this.showValueWidget = ComfyWidgets["STRING"](this, "values", ["STRING", { multiline: true }], app).widget
+            }
+            const onExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+                onExecuted === null || onExecuted === void 0 ? void 0 : onExecuted.apply(this, [message])
+                this.showValueWidget.value = message.text[0]
+            }
+        } else if (nodeData.name === "GODMT_GetLength") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeType.prototype.onNodeCreated = function () {
+                onNodeCreated ? onNodeCreated.apply(this, []) : undefined
+                this.showValueWidget = ComfyWidgets["STRING"](this, "length", ["STRING", { multiline: false }], app).widget
+            }
+            const onExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+                onExecuted === null || onExecuted === void 0 ? void 0 : onExecuted.apply(this, [message])
+                this.showValueWidget.value = message.text[0]
             }
         } else if (nodeData.name === "GODMT_GetShape") {
             const onNodeCreated = nodeType.prototype.onNodeCreated

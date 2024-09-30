@@ -1,5 +1,6 @@
 import numpy as np
 import itertools
+import numbers
 
 
 # wildcard trick is taken from pythongossss's
@@ -242,38 +243,6 @@ class ListToBatch:
 
     def run(self, ANY: list):
         return (ANY, )
-
-
-class CreateStringList:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {},
-            "optional": {},
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "prompt": "PROMPT", 
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
-    
-    TITLE = "Create String List"
-    RETURN_TYPES = ("STRING", )
-    OUTPUT_IS_LIST = (True, )
-    FUNCTION = "run"
-    CATEGORY = "list_utils"
-
-    def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        output_list = []
-        for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
-                output_list.append(v)
-        return (output_list, )
     
 
 class CreateList:
@@ -502,7 +471,7 @@ class Pack:
         }
     
     TITLE = "Pack"
-    RETURN_TYPES = ("DICT", )
+    RETURN_TYPES = ("PACK", )
     RETURN_NAMES = ("PACK", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -535,7 +504,7 @@ class Unpack:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "PACK": ("DICT", ),
+                "PACK": ("PACK", ),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -580,9 +549,11 @@ class GetLength:
     RETURN_NAMES = ("length", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
+    OUTPUT_NODE = True
 
     def run(self, ANY):
-        return (len(ANY), )
+        length = len(ANY)
+        return { "ui": {"text": (f"{length}",)}, "result": (length, ) }
 
 
 class GetShape:
@@ -699,6 +670,7 @@ class GetWidgetsValues:
     OUTPUT_NODE = True
     FUNCTION = "run"
     CATEGORY = "list_utils"
+    OUTPUT_NODE = True
 
     def run(self, ANY, unique_id, prompt, extra_pnginfo):
         node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
@@ -707,7 +679,35 @@ class GetWidgetsValues:
         link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
         in_node_id, in_socket_id = link[1], link[2]
         in_node = next(n for n in node_list if n["id"] == in_node_id)
-        return (in_node["widgets_values"], )
+        return { "ui": {"text": (f"{in_node['widgets_values']}",)}, "result": (in_node["widgets_values"], ) }
+
+
+def try_cast(x, dst_type: str):
+    result = x
+    if dst_type == "STRING":
+        result = str(x)
+    elif dst_type == "INT":
+        result = int(x)
+    elif dst_type == "FLOAT" or dst_type == "NUMBER":
+        result = float(x)
+    elif dst_type == "BOOLEAN":
+        if isinstance(x, numbers.Number):
+            if x > 0:
+                result = True
+            else:
+                result = False
+        elif isinstance(x, str):
+            try:
+                x = float(x)
+                if x > 0:
+                    result = True
+                else:
+                    result = False
+            except:
+                result = bool(x)
+        else:
+            result = bool(x)
+    return result
 
 
 class AnyCast:
@@ -719,7 +719,7 @@ class AnyCast:
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}),
-                "TYPE": (["*", "STRING", "INT", "FLOAT", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"], {}),
+                "TYPE": (["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"], {}),
             },
         }
     
@@ -729,13 +729,7 @@ class AnyCast:
     CATEGORY = "list_utils"
 
     def run(self, ANY, TYPE):
-        result = ANY
-        if TYPE == "STRING":
-            result = str(ANY)
-        elif TYPE == "INT":
-            result = int(ANY)
-        elif TYPE == "FLOAT" or TYPE == "NUMBER":
-            result = float(ANY)
+        result = try_cast(ANY, TYPE)
         return (result, )
 
 
@@ -748,7 +742,7 @@ class BatchItemCast:
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
-                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER"], {}),
+                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN"], {}),
             },
         }
     
@@ -759,13 +753,7 @@ class BatchItemCast:
     CATEGORY = "list_utils"
 
     def run(self, LIST: list, TYPE: str):
-        converted_list = []
-        if TYPE == "STRING":
-            converted_list = [str(v) for v in LIST]
-        elif TYPE == "INT":
-            converted_list = [int(v) for v in LIST]
-        elif TYPE == "FLOAT" or TYPE == "NUMBER":
-            converted_list = [float(v) for v in LIST]
+        converted_list = [try_cast(x, TYPE) for x in LIST]
         return (converted_list, )
 
 

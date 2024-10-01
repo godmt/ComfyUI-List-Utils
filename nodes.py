@@ -218,8 +218,7 @@ class BatchToList:
     CATEGORY = "list_utils"
 
     def run(self, LIST: list):
-        any_list = [i for i in LIST]
-        return (any_list, )
+        return (LIST, )
 
 
 class ListToBatch:

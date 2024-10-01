@@ -239,6 +239,7 @@ app.registerExtension({
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Disconnect) {
                         // shrink outputs to 1
+                        /*
                         if (!this.outputs || this.outputs.length == 0) {
                             this.addOutput(`${_prefix}_1`, "*")
                         }
@@ -247,6 +248,7 @@ app.registerExtension({
                         for (let i = output_len - 1; i > 0; i--) {
                             this.removeOutput(i)
                         }
+                        */
                     } else if (event === TypeSlotEvent.Connect && link_info) {
                         // find the origin Pack
                         let link_id = this.inputs[slot].link

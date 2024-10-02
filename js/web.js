@@ -237,19 +237,7 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    if (event === TypeSlotEvent.Disconnect) {
-                        // shrink outputs to 1
-                        /*
-                        if (!this.outputs || this.outputs.length == 0) {
-                            this.addOutput(`${_prefix}_1`, "*")
-                        }
-                        this.outputs[0].type = "*"
-                        const output_len = this.outputs.length
-                        for (let i = output_len - 1; i > 0; i--) {
-                            this.removeOutput(i)
-                        }
-                        */
-                    } else if (event === TypeSlotEvent.Connect && link_info) {
+                    if (event === TypeSlotEvent.Connect && link_info) {
                         // find the origin Pack
                         let link_id = this.inputs[slot].link
                         let origin_id = app.graph.links[link_id]?.origin_id
@@ -262,7 +250,7 @@ app.registerExtension({
                                 break
                             }
                             if (origin_node.inputs.length == 0) {
-                                console.log("ERROR: Pack node not found")
+                                console.log("warning: Pack node not found")
                                 origin_node = undefined
                                 break
                             }
@@ -276,7 +264,7 @@ app.registerExtension({
                                 }
                             }
                             if (origin_slot == -1) {
-                                console.log("ERROR: Pack node not found")
+                                console.log("warning: Pack node not found")
                                 origin_node = undefined
                                 break
                             }

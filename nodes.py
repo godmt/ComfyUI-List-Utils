@@ -756,6 +756,52 @@ class BatchItemCast:
         return (converted_list, )
 
 
+class Exec:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "FUNC": ("STRING", {"forceInput": False, "multiline": True, "default": "result = x[0]"})
+            },
+            "optional": {},
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    TITLE = "Exec"
+    RETURN_TYPES = (ANY_TYPE, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
+        result_dict = {}
+        
+        func_str = kwargs["FUNC"]
+        
+        if "result" not in func_str:
+            print("error: no `result` in FUNC")
+            return (None, )
+        
+        func_str = func_str.replace("result", "result_dict['result']")
+        print(func_str)
+
+        vars_str = "x = []\n"
+        for k in kwargs.keys():
+            if k.startswith("x["):
+                vars_str += f"x.append(kwargs['{k}'])\n"
+        
+        exec_str = vars_str + func_str
+
+        exec(exec_str)
+        return (result_dict["result"], )
+
+
 NODE_CLASS_MAPPINGS = {
     "GODMT_SplitString": SplitString,
     "GODMT_ListGetByIndex": ListGetByIndex,
@@ -779,4 +825,5 @@ NODE_CLASS_MAPPINGS = {
     "GODMT_GetWidgetsValues": GetWidgetsValues,
     "GODMT_AnyCast": AnyCast,
     "GODMT_BatchItemCast": BatchItemCast,
+    "GODMT_Exec": Exec,
 }

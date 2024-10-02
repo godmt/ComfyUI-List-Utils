@@ -73,7 +73,7 @@ function getWorkflowTypes(app) {
 app.registerExtension({
     name: "godmt.ListUtils",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "GODMT_Pack" || nodeData.name == "GODMT_CreateBatch") {
+        if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreateBatch") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -113,7 +113,78 @@ app.registerExtension({
                 }
                 return me
             }
-        } else if (nodeData.name === "GODMT_CreateList" || nodeData.name === "GODMT_MergeList") {
+        } else if (nodeData.name === "GODMT_Exec") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeType.prototype.onNodeCreated = function () {
+                const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
+                this.addInput(`x[0]`, '*')
+                return r
+            }
+
+            // on copy and paste
+            const onConfigure = nodeType.prototype.onConfigure
+            nodeType.prototype.onConfigure = function () {
+                const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
+                if (!app.configuringGraph && this.inputs) {
+                    const length = this.inputs.length
+                    for (let i = length - 1; i >= 0; i--) {
+                        this.removeInput(i)
+                    }
+                    this.addInput(`x[0]`, '*')
+                }
+                return r
+            }
+
+            const onConnectionsChange = nodeType.prototype.onConnectionsChange
+            nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
+                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                if (slotType === TypeSlot.Input) {
+                    // remove all non connected inputs
+                    if (event == TypeSlotEvent.Disconnect && this.inputs.length > 1) {
+                        if (this.widgets) {
+                            const widget = this.widgets.find((w) => w.name === this.inputs[slot].name)
+                            if (widget) {
+                                widget.onRemoved?.()
+                                this.widgets.length = this.widgets.length - 1
+                            }
+                        }
+                        this.removeInput(slot)
+                        // make inputs sequential again
+                        for (let i = 0; i < this.inputs.length; i++) {
+                            const name = `x[${i}]`
+                            this.inputs[i].label = name
+                            this.inputs[i].name = name
+                        }
+                    }
+
+                    // TODO type
+                    const type = "*"
+                    // add an extra input
+                    if (this.inputs[this.inputs.length - 1].link != undefined) {
+                        const nextIndex = this.inputs.length
+                        const name = `x[${nextIndex}]`
+                        this.addInput(name, type)
+                    }
+
+                    if (event === TypeSlotEvent.Connect && link_info) {
+                        const fromNode = this.graph._nodes.find(
+                            (otherNode) => otherNode.id == link_info.origin_id
+                        )
+                        const type = fromNode.outputs[link_info.origin_slot].type
+                        this.inputs[slot].type = type
+                    } else if (event === TypeSlotEvent.Disconnect) {
+                        this.inputs[slot].type = '*'
+                        this.inputs[slot].label = `x[${slot}]`
+                    }
+                    if (this.widgets && this.widgets[0]) {
+                        this.widgets[0].y = this.inputs.length * 20
+                        // TODO update node height
+                    }
+                }
+                return me
+            }
+        }
+        else if (nodeData.name === "GODMT_CreateList" || nodeData.name === "GODMT_MergeList") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined

@@ -313,7 +313,8 @@ app.registerExtension({
                         let link_id = this.inputs[slot]?.link
                         let origin_id = app.graph.links[link_id]?.origin_id
                         let origin_node = app.graph._nodes.find(n => n.id == origin_id)
-                        for (let i = 0; i < 20; i++) {
+                        for (let i = 0; i < 10; i++) {
+                            origin_node = app.graph._nodes.find(n => n.id == origin_id)
                             if (!origin_node) {
                                 break
                             }
@@ -345,9 +346,9 @@ app.registerExtension({
                             if (!origin_id) {
                                 break
                             }
-                            origin_node = app.graph._nodes.find(n => n.id == origin_id)
+                            origin_node = undefined
                         }
-                        if (origin_node) {
+                        if (origin_node && origin_node.type === "GODMT_Pack") {
                             const origin_inputs = origin_node.inputs
                             const output_len = origin_inputs.length - 1  // end is empty socket
                             const cur_len = this.outputs.length

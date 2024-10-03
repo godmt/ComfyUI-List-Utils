@@ -310,7 +310,7 @@ app.registerExtension({
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
                         // find the origin Pack
-                        let link_id = this.inputs[slot].link
+                        let link_id = this.inputs[slot]?.link
                         let origin_id = app.graph.links[link_id]?.origin_id
                         let origin_node = app.graph._nodes.find(n => n.id == origin_id)
                         for (let i = 0; i < 20; i++) {
@@ -340,7 +340,7 @@ app.registerExtension({
                                 break
                             }
 
-                            link_id = origin_node.inputs[origin_slot].link
+                            link_id = origin_node.inputs[origin_slot]?.link
                             origin_id = app.graph.links[link_id]?.origin_id
                             if (!origin_id) {
                                 break
@@ -429,6 +429,7 @@ app.registerExtension({
             nodeType.prototype.onNodeCreated = function () {
                 onNodeCreated ? onNodeCreated.apply(this, []) : undefined
                 this.showValueWidget = ComfyWidgets["STRING"](this, "length", ["STRING", { multiline: false }], app).widget
+                // this.addWidget("STRING", "length", "", () => { }, { multiline: false })
             }
             const onExecuted = nodeType.prototype.onExecuted
             nodeType.prototype.onExecuted = function (message) {

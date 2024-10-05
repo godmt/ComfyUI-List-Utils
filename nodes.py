@@ -3,6 +3,8 @@ import itertools
 import numbers
 
 
+VAR_PREFIX = 'value'
+
 # wildcard trick is taken from pythongossss's
 class AnyType(str):
     def __ne__(self, __value: object) -> bool:
@@ -55,7 +57,7 @@ class SplitString:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "STRING": ("STRING", {"multiline": True}),
@@ -98,7 +100,7 @@ class ListGetByIndex:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY": (ANY_TYPE, {"forceInput": True}),
@@ -125,7 +127,7 @@ class BatchGetByIndex:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
@@ -150,7 +152,7 @@ class ListSlice:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY": (ANY_TYPE, {"forceInput": True}),
@@ -179,7 +181,7 @@ class BatchSlice:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
@@ -204,7 +206,7 @@ class BatchToList:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
@@ -226,7 +228,7 @@ class ListToBatch:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY": (ANY_TYPE, {"forceInput": True}),
@@ -249,7 +251,7 @@ class CreateList:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {},
             "optional": {},
@@ -271,7 +273,7 @@ class CreateList:
         cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
         for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
+            if k.startswith(VAR_PREFIX):
                 output_list.append(v)
         return (output_list, )
 
@@ -281,7 +283,7 @@ class CreateBatch:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {},
             "optional": {},
@@ -302,7 +304,7 @@ class CreateBatch:
         cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
         for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
+            if k.startswith(VAR_PREFIX):
                 output_list.append(v)
         return (output_list, )
 
@@ -312,7 +314,7 @@ class MergeList:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {},
             "optional": {},
@@ -338,7 +340,7 @@ class MergeList:
         cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
         for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
+            if k.startswith(VAR_PREFIX):
                 output_list += v
         return (output_list, )
 
@@ -348,7 +350,7 @@ class MergeBatch:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {},
             "optional": {},
@@ -369,7 +371,7 @@ class MergeBatch:
         cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
         for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
+            if k.startswith(VAR_PREFIX):
                 output_list += v
         return (output_list, )
 
@@ -379,7 +381,7 @@ class CreateRange:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "start": ("INT", {"default": 0, "min": -9007199254740991}),
@@ -391,7 +393,7 @@ class CreateRange:
     TITLE = "Create Range"
     RETURN_TYPES = ("INT", "LIST", "INT")
     RETURN_NAMES = ("INT", "LIST", "length")
-    OUTPUT_IS_LIST = (True, False, False, )
+    OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -405,7 +407,7 @@ class CreateArange:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "start": ("FLOAT", {"default": 0}),
@@ -417,7 +419,7 @@ class CreateArange:
     TITLE = "Create Arange"
     RETURN_TYPES = ("FLOAT", "LIST", "INT")
     RETURN_NAMES = ("FLOAT", "LIST", "length")
-    OUTPUT_IS_LIST = (True, False, False, )
+    OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -431,7 +433,7 @@ class CreateLinspace:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "start": ("FLOAT", {"default": 0}),
@@ -443,7 +445,7 @@ class CreateLinspace:
     TITLE = "Create Linspace"
     RETURN_TYPES = ("FLOAT", "LIST", "INT")
     RETURN_NAMES = ("FLOAT", "LIST", "length")
-    OUTPUT_IS_LIST = (True, False, False, )
+    OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -452,13 +454,12 @@ class CreateLinspace:
         return (range_list, range_list, len(range_list))
 
 
-PACK_PREFIX = 'value'
 class Pack:
     def __init__(self):
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {},
             "optional": {},
@@ -484,7 +485,7 @@ class Pack:
             "data": data,
         }
         for k, v in kwargs.items():
-            if k.startswith(PACK_PREFIX):
+            if k.startswith(VAR_PREFIX):
                 i = int(k.split("_")[1])
                 data[i - 1] = {
                     "name": cur_node["inputs"][i - 1]["name"],
@@ -500,7 +501,7 @@ class Unpack:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "PACK": ("PACK", ),
@@ -536,7 +537,7 @@ class GetLength:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}), 
@@ -560,7 +561,7 @@ class GetShape:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "tensor" : ("IMAGE,LATENT,MASK", {}), 
@@ -623,7 +624,7 @@ class AnyToDict:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}), 
@@ -651,7 +652,7 @@ class GetWidgetsValues:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}), 
@@ -714,7 +715,7 @@ class AnyCast:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}),
@@ -723,7 +724,7 @@ class AnyCast:
         }
     
     TITLE = "Any Cast"
-    RETURN_TYPES = (ANY_TYPE,)
+    RETURN_TYPES = (ANY_TYPE, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -737,7 +738,7 @@ class BatchItemCast:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "LIST": ("LIST", {"forceInput": True}),
@@ -761,7 +762,7 @@ class Exec:
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(self):
         return {
             "required": {
                 "FUNC": ("STRING", {"forceInput": False, "multiline": True, "default": "result = x[0]"})
@@ -787,16 +788,13 @@ class Exec:
         if "result" not in func_str:
             print("error: no `result` in FUNC")
             return (None, )
-        
-        func_str = func_str.replace("result", "result_dict['result']")
-        print(func_str)
 
         vars_str = "x = []\n"
         for k in kwargs.keys():
             if k.startswith("x["):
                 vars_str += f"x.append(kwargs['{k}'])\n"
-        
-        exec_str = vars_str + func_str
+        foot_str = "\nresult_dict['result'] = result"
+        exec_str = vars_str + func_str + foot_str
 
         exec(exec_str)
         return (result_dict["result"], )

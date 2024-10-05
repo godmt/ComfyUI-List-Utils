@@ -1,9 +1,8 @@
-// https://gist.github.com/Amorano/9871fb3be1aa75defdfad013e1f95e0e
 import { app } from "../../scripts/app.js"
-// import { api } from "../../scripts/api.js"
 import { ComfyWidgets } from "../../scripts/widgets.js"
-// import { addConnectionLayoutSupport } from "./utils.js"
 
+
+// ref: https://gist.github.com/Amorano/9871fb3be1aa75defdfad013e1f95e0e
 const _prefix = 'value'
 
 const TypeSlot = {
@@ -97,7 +96,7 @@ app.registerExtension({
 
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     dynamic_connection(this, slot, event, `${_prefix}_`, '*')
                     if (event === TypeSlotEvent.Connect && link_info) {
@@ -111,7 +110,7 @@ app.registerExtension({
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                     }
                 }
-                return me
+                return r
             }
         } else if (nodeData.name === "GODMT_Exec") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
@@ -137,7 +136,7 @@ app.registerExtension({
 
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     // remove all non connected inputs
                     if (event == TypeSlotEvent.Disconnect && this.inputs.length > 1) {
@@ -181,7 +180,7 @@ app.registerExtension({
                         // TODO update node height
                     }
                 }
-                return me
+                return r
             }
         }
         else if (nodeData.name === "GODMT_CreateList" || nodeData.name === "GODMT_MergeList") {
@@ -209,7 +208,7 @@ app.registerExtension({
 
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (!this.inputs[slot].name.startsWith(_prefix)) {
                         return
@@ -249,7 +248,7 @@ app.registerExtension({
                         this.addInput(`${_prefix}_${nextIndex + 1}`, this.inputs[0].type)
                     }
                 }
-                return me
+                return r
             }
         } else if (nodeData.name == "GODMT_MergeBatch") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
@@ -275,7 +274,7 @@ app.registerExtension({
 
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     dynamic_connection(this, slot, event, `${_prefix}_`, 'LIST')
                     if (event === TypeSlotEvent.Connect && link_info) {
@@ -289,7 +288,7 @@ app.registerExtension({
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                     }
                 }
-                return me
+                return r
             }
         } else if (nodeData.name === "GODMT_Unpack") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
@@ -306,13 +305,13 @@ app.registerExtension({
 
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
                         // find the origin Pack
                         let link_id = this.inputs[slot]?.link
                         let origin_id = app.graph.links[link_id]?.origin_id
-                        let origin_node = app.graph._nodes.find(n => n.id == origin_id)
+                        let origin_node = null
                         for (let i = 0; i < 10; i++) {
                             origin_node = app.graph._nodes.find(n => n.id == origin_id)
                             if (!origin_node) {
@@ -322,8 +321,7 @@ app.registerExtension({
                                 break
                             }
                             if (origin_node.inputs.length == 0) {
-                                console.log("warning: Pack node not found")
-                                origin_node = undefined
+                                origin_node = null
                                 break
                             }
                             let origin_slot = -1
@@ -336,18 +334,17 @@ app.registerExtension({
                                 }
                             }
                             if (origin_slot == -1) {
-                                console.log("warning: Pack node not found")
-                                origin_node = undefined
+                                origin_node = null
                                 break
                             }
-
                             link_id = origin_node.inputs[origin_slot]?.link
                             origin_id = app.graph.links[link_id]?.origin_id
                             if (!origin_id) {
                                 break
                             }
-                            origin_node = undefined
+                            origin_node = null
                         }
+                        // must be GODMT_Pack, but double check
                         if (origin_node && origin_node.type === "GODMT_Pack") {
                             const origin_inputs = origin_node.inputs
                             const output_len = origin_inputs.length - 1  // end is empty socket
@@ -364,12 +361,12 @@ app.registerExtension({
                         }
                     }
                 }
-                return me
+                return r
             }
         } else if (nodeData.name == "GODMT_AnyCast") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
-                const me = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
+                const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
                 const onWidgetChanged = this.widgets[0].callback
                 const thisNode = this
                 this.widgets[0].callback = function () {
@@ -378,23 +375,23 @@ app.registerExtension({
                     thisNode.outputs[0].type = output_type
                     thisNode.outputs[0].label = output_type
                     thisNode.outputs[0].name = output_type
-                    return me
+                    return r
                 }
-                return me
+                return r
             }
             // on copy, paste, load
             const onConfigure = nodeType.prototype.onConfigure
             nodeType.prototype.onConfigure = function () {
-                const me = onConfigure ? onConfigure.apply(this, arguments) : undefined
+                const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
                 const output_type = this.widgets[0].value
                 this.outputs[0].type = output_type
                 this.outputs[0].label = output_type
                 this.outputs[0].name = output_type
-                return me
+                return r
             }
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const origin_node = app.graph.getNodeById(link_info.origin_id)
@@ -412,7 +409,7 @@ app.registerExtension({
                         this.outputs[0].name = "*"
                     }
                 }
-                return me
+                return r
             }
         } else if (nodeData.name === "GODMT_GetWidgetsValues") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
@@ -451,7 +448,7 @@ app.registerExtension({
         } else if (nodeData.name === "GODMT_ListGetByIndex" || nodeData.name === "GODMT_ListSlice") {
             const onConnectionsChange = nodeType.prototype.onConnectionsChange
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
-                const me = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
+                const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const node = app.graph.getNodeById(link_info.origin_id)
@@ -465,7 +462,7 @@ app.registerExtension({
                         this.outputs[0].name = "*"
                     }
                 }
-                return me
+                return r
             }
         }
     }

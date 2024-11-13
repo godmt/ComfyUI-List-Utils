@@ -369,6 +369,10 @@ app.registerExtension({
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
                 const onWidgetChanged = this.widgets[0].callback
                 const thisNode = this
+                const output_type = thisNode.widgets[0].value
+                thisNode.outputs[0].type = output_type
+                thisNode.outputs[0].label = output_type
+                thisNode.outputs[0].name = output_type
                 this.widgets[0].callback = function () {
                     const me = onWidgetChanged ? onWidgetChanged.apply(this, arguments) : undefined
                     const output_type = thisNode.widgets[0].value

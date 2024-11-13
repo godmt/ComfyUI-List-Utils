@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 import numbers
+from pathlib import Path
 
 
 VAR_PREFIX = 'value'
@@ -757,6 +758,39 @@ class BatchItemCast:
         return (converted_list, )
 
 
+class ListDir:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(self):
+        return {
+            "required": {
+                "path": ("STRING", {"default": ""}),
+                "pattern": ("STRING", {"default": "*"})
+            },
+            "optional": {},
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    TITLE = "List Dir"
+    RETURN_TYPES = ("STRING", "LIST", "INT")
+    RETURN_NAMES = ("STRING", "LIST", "length")
+    OUTPUT_IS_LIST = (True, False, False, )
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+
+    def run(self, path, pattern, unique_id, prompt, extra_pnginfo, **kwargs):
+        path = Path(path)
+        items = list(path.glob(pattern))
+        items.sort()
+        return (items, items, len(items))
+
+
 class Exec:
     def __init__(self):
         pass
@@ -823,5 +857,6 @@ NODE_CLASS_MAPPINGS = {
     "GODMT_GetWidgetsValues": GetWidgetsValues,
     "GODMT_AnyCast": AnyCast,
     "GODMT_BatchItemCast": BatchItemCast,
+    "GODMT_ListDir": ListDir,
     "GODMT_Exec": Exec,
 }

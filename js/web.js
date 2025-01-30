@@ -55,7 +55,6 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
  * @returns {Set} Unique set of all types used in the workflow
  */
 function getWorkflowTypes(app) {
-    // 実装
     const types = new Set(["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"])
     app.graph._nodes.forEach(node => {
         node.inputs.forEach(slot => {
@@ -66,6 +65,27 @@ function getWorkflowTypes(app) {
         })
     })
     return Array.from(types)
+}
+
+
+function renderTable(data, container) {
+    container.innerHTML = ""  // Clear previous content
+    const table = document.createElement("table")
+    table.className = "comfy-table"
+
+    // Add headers
+    const headerRow = table.insertRow()
+    headerRow.insertCell().textContent = "Index"
+    headerRow.insertCell().textContent = "Value"
+
+    // Populate rows
+    data.forEach((item) => {
+        const row = table.insertRow()
+        row.insertCell().textContent = item.index
+        row.insertCell().textContent = item.value
+    });
+
+    container.appendChild(table)
 }
 
 
@@ -355,7 +375,7 @@ app.registerExtension({
                             for (let i = cur_len; i < output_len; i++) {
                                 this.addOutput(`${_prefix}_${i + 1}`, origin_inputs[i].type)
                             }
-                            for (let i = 0; i < cur_len; i++) {
+                            for (let i = 0; i < cur_len && i < output_len; i++) {
                                 this.outputs[i].type = origin_inputs[i].type
                             }
                         }
@@ -467,6 +487,29 @@ app.registerExtension({
                     }
                 }
                 return r
+            }
+        } else if (nodeData.name === "GODMT_DisplayList") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated
+            nodeData.input.required.input_list[1].widget = "LIST_TABLE";
+            nodeType.prototype.onNodeCreated = function () {
+                onNodeCreated ? onNodeCreated.apply(this, []) : undefined
+                // this.showValueWidget = ListTableWidget(this, "list_table", ["STRING", {}], app).widget
+                this.showValueWidget = ComfyWidgets["STRING"](this, "list_table", ["STRING", { multiline: true }], app).widget
+            }
+            const onExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+                onExecuted === null || onExecuted === void 0 ? void 0 : onExecuted.apply(this, [message])
+                try {
+                    const data = JSON.parse(message.text[0])
+                    console.log(data)
+                    let text = ""
+                    data.forEach(d => {
+                        text += d.index + " : " + d.value + "\n"
+                    })
+                    this.showValueWidget.value = text
+                } catch (e) {
+                    console.error("Error parsing list data:", e)
+                }
             }
         }
     }

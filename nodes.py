@@ -1,5 +1,6 @@
 import numpy as np
 import itertools
+import json
 import numbers
 from pathlib import Path
 
@@ -172,8 +173,6 @@ class ListSlice:
     def run(self, ANY: list, start: list[int], end: list[int]):
         start = start[0]
         end = end[0]
-        if end == 0:
-            return (ANY[start:], )
         return (ANY[start:end], )
 
 
@@ -197,8 +196,6 @@ class BatchSlice:
     CATEGORY = "list_utils"
 
     def run(self, LIST: list, start: int, end: int):
-        if end == 0:
-            return (LIST[start:], )
         return (LIST[start:end], )
 
 
@@ -789,6 +786,36 @@ class ListDir:
         items = list(path.glob(pattern))
         items.sort()
         return (items, items, len(items))
+
+""" WIP
+class DisplayList:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(self):
+        return {
+            "required": {
+                "input_list": (ANY_TYPE, {"forceInput": True}),
+            },
+        }
+    
+    TITLE = "Display List"
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("table_output",)
+    FUNCTION = "run"
+    CATEGORY = "list_utils"
+    OUTPUT_NODE = True
+
+    def run(self, input_list):
+        # Convert list to a format for frontend (e.g., JSON)
+        if type(input_list) is list:
+            pass
+        else:
+            input_list = [input_list]
+        table_data = [{"index": i, "value": item} for i, item in enumerate(input_list)]
+        return { "ui": {"text": (json.dumps(table_data) ,)}, "result": (json.dumps(table_data), ) }
+"""
 
 
 class Exec:

@@ -146,7 +146,7 @@ app.registerExtension({
                 const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
                 if (!app.configuringGraph && this.inputs) {
                     const length = this.inputs.length
-                    for (let i = length - 1; i >= 0; i--) {
+                    for (let i = length - 1; i > 0; i--) {
                         this.removeInput(i)
                     }
                     this.addInput(`x[0]`, '*')
@@ -158,7 +158,7 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    // remove all non connected inputs
+                    // remove all disconnected inputs
                     if (event == TypeSlotEvent.Disconnect && this.inputs.length > 1) {
                         if (this.widgets) {
                             const widget = this.widgets.find((w) => w.name === this.inputs[slot].name)
@@ -168,9 +168,9 @@ app.registerExtension({
                             }
                         }
                         this.removeInput(slot)
-                        // make inputs sequential again
-                        for (let i = 0; i < this.inputs.length; i++) {
-                            const name = `x[${i}]`
+                        // make inputs sequential again (0 is string widget)
+                        for (let i = 1; i < this.inputs.length; i++) {
+                            const name = `x[${i-1}]`
                             this.inputs[i].label = name
                             this.inputs[i].name = name
                         }
@@ -180,7 +180,7 @@ app.registerExtension({
                     const type = "*"
                     // add an extra input
                     if (this.inputs[this.inputs.length - 1].link != undefined) {
-                        const nextIndex = this.inputs.length
+                        const nextIndex = this.inputs.length - 1  // string widget is regarded as input also
                         const name = `x[${nextIndex}]`
                         this.addInput(name, type)
                     }
@@ -192,8 +192,8 @@ app.registerExtension({
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
                     } else if (event === TypeSlotEvent.Disconnect) {
-                        this.inputs[slot].type = '*'
-                        this.inputs[slot].label = `x[${slot}]`
+                        // this.inputs[slot].type = '*'
+                        // this.inputs[slot].label = `x[${slot}]`
                     }
                     if (this.widgets && this.widgets[0]) {
                         this.widgets[0].y = this.inputs.length * 20

@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-list-utils"
-description = "Comfy List and Python list (PyList) utilities which support: create, merge, convert, get or slice"
+description = "Primitive ComfyUI custom nodes for working with ComfyUI List processing, raw Python list values, and typed value bundles."
 version = "2.0.0"
 license = { file = "LICENSE" }
 

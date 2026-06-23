@@ -15,7 +15,39 @@ const TypeSlotEvent = {
     Disconnect: false,
 }
 
-const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', names = []
+const TOOLTIP_VALUE_INPUT = "Connect a value. Connecting the last empty socket adds another input."
+const TOOLTIP_PACK_VALUE_INPUT = "Value to store in the PACK. The input name, type, and value are preserved for Unpack."
+const TOOLTIP_PYLIST_INPUT = "Connect a PyList. Connecting the last empty socket adds another input."
+const TOOLTIP_EXEC_INPUT = "Input value available inside FUNC as x[index]. Connecting the last empty socket adds another input."
+const TOOLTIP_UNPACK_OUTPUT = "Value restored from the connected PACK. Output type is copied from the original Pack input."
+
+const setTooltip = (slot, tooltip) => {
+    if (slot && tooltip) {
+        slot.tooltip = tooltip
+    }
+    return slot
+}
+
+const addInputWithTooltip = (node, name, type, tooltip) => {
+    const index = node.inputs?.length ?? 0
+    node.addInput(name, type)
+    return setTooltip(node.inputs?.[index], tooltip)
+}
+
+const addOutputWithTooltip = (node, name, type, tooltip) => {
+    const index = node.outputs?.length ?? 0
+    node.addOutput(name, type)
+    return setTooltip(node.outputs?.[index], tooltip)
+}
+
+const dynamic_connection = (
+    node,
+    index,
+    event,
+    prefix = 'in_',
+    type = '*',
+    names = [],
+    tooltip = ""
 ) => {
     if (!node.inputs[index].name.startsWith(prefix)) {
         return
@@ -37,6 +69,7 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
             const name = i < names.length ? names[i] : `${prefix}${i + 1}`
             node.inputs[i].label = name
             node.inputs[i].name = name
+            setTooltip(node.inputs[i], tooltip)
         }
     }
 
@@ -46,7 +79,7 @@ const dynamic_connection = (node, index, event, prefix = 'in_', type = '*', name
         const name = nextIndex < names.length
             ? names[nextIndex]
             : `${prefix}${nextIndex + 1}`
-        node.addInput(name, type)
+        addInputWithTooltip(node, name, type, tooltip)
     }
 }
 
@@ -93,10 +126,13 @@ app.registerExtension({
     name: "godmt.ListUtils",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreatePyList") {
+            const inputTooltip = nodeData.name === "GODMT_Pack"
+                ? TOOLTIP_PACK_VALUE_INPUT
+                : TOOLTIP_VALUE_INPUT
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`${_prefix}_1`, '*')
+                addInputWithTooltip(this, `${_prefix}_1`, '*', inputTooltip)
                 return r
             }
 
@@ -109,7 +145,7 @@ app.registerExtension({
                     for (let i = length - 1; i >= 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`${_prefix}_1`, '*')
+                    addInputWithTooltip(this, `${_prefix}_1`, '*', inputTooltip)
                 }
                 return r
             }
@@ -118,16 +154,18 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, '*')
+                    dynamic_connection(this, slot, event, `${_prefix}_`, '*', [], inputTooltip)
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const fromNode = this.graph._nodes.find(
                             (otherNode) => otherNode.id == link_info.origin_id
                         )
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
+                        setTooltip(this.inputs[slot], inputTooltip)
                     } else if (event === TypeSlotEvent.Disconnect) {
                         this.inputs[slot].type = '*'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
+                        setTooltip(this.inputs[slot], inputTooltip)
                     }
                 }
                 return r
@@ -136,7 +174,7 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`x[0]`, '*')
+                addInputWithTooltip(this, `x[0]`, '*', TOOLTIP_EXEC_INPUT)
                 return r
             }
 
@@ -149,7 +187,7 @@ app.registerExtension({
                     for (let i = length - 1; i > 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`x[0]`, '*')
+                    addInputWithTooltip(this, `x[0]`, '*', TOOLTIP_EXEC_INPUT)
                 }
                 return r
             }
@@ -173,6 +211,7 @@ app.registerExtension({
                             const name = `x[${i-1}]`
                             this.inputs[i].label = name
                             this.inputs[i].name = name
+                            setTooltip(this.inputs[i], TOOLTIP_EXEC_INPUT)
                         }
                     }
 
@@ -182,7 +221,7 @@ app.registerExtension({
                     if (this.inputs[this.inputs.length - 1].link != undefined) {
                         const nextIndex = this.inputs.length - 1  // string widget is regarded as input also
                         const name = `x[${nextIndex}]`
-                        this.addInput(name, type)
+                        addInputWithTooltip(this, name, type, TOOLTIP_EXEC_INPUT)
                     }
 
                     if (event === TypeSlotEvent.Connect && link_info) {
@@ -191,6 +230,7 @@ app.registerExtension({
                         )
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
+                        setTooltip(this.inputs[slot], TOOLTIP_EXEC_INPUT)
                     } else if (event === TypeSlotEvent.Disconnect) {
                         // this.inputs[slot].type = '*'
                         // this.inputs[slot].label = `x[${slot}]`
@@ -207,7 +247,7 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`${_prefix}_1`, '*')
+                addInputWithTooltip(this, `${_prefix}_1`, '*', TOOLTIP_VALUE_INPUT)
                 return r
             }
 
@@ -221,7 +261,7 @@ app.registerExtension({
                     for (let i = length - 1; i >= 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`${_prefix}_1`, '*')
+                    addInputWithTooltip(this, `${_prefix}_1`, '*', TOOLTIP_VALUE_INPUT)
                 }
                 return r
             }
@@ -259,13 +299,14 @@ app.registerExtension({
                         for (let i = 0; i < this.inputs.length; i++) {
                             this.inputs[i].label = `${_prefix}_${i + 1}`
                             this.inputs[i].name = `${_prefix}_${i + 1}`
+                            setTooltip(this.inputs[i], TOOLTIP_VALUE_INPUT)
                         }
                     }
 
                     // add an extra input
                     if (this.inputs[this.inputs.length - 1].link != undefined) {
                         const nextIndex = this.inputs.length
-                        this.addInput(`${_prefix}_${nextIndex + 1}`, this.inputs[0].type)
+                        addInputWithTooltip(this, `${_prefix}_${nextIndex + 1}`, this.inputs[0].type, TOOLTIP_VALUE_INPUT)
                     }
                 }
                 return r
@@ -274,7 +315,7 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`${_prefix}_1`, 'PYLIST')
+                addInputWithTooltip(this, `${_prefix}_1`, 'PYLIST', TOOLTIP_PYLIST_INPUT)
                 return r
             }
 
@@ -287,7 +328,7 @@ app.registerExtension({
                     for (let i = length - 1; i >= 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`${_prefix}_1`, 'PYLIST')
+                    addInputWithTooltip(this, `${_prefix}_1`, 'PYLIST', TOOLTIP_PYLIST_INPUT)
                 }
                 return r
             }
@@ -296,16 +337,18 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, 'PYLIST')
+                    dynamic_connection(this, slot, event, `${_prefix}_`, 'PYLIST', [], TOOLTIP_PYLIST_INPUT)
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const fromNode = this.graph._nodes.find(
                             (otherNode) => otherNode.id == link_info.origin_id
                         )
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
+                        setTooltip(this.inputs[slot], TOOLTIP_PYLIST_INPUT)
                     } else if (event === TypeSlotEvent.Disconnect) {
                         this.inputs[slot].type = 'PYLIST'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
+                        setTooltip(this.inputs[slot], TOOLTIP_PYLIST_INPUT)
                     }
                 }
                 return r
@@ -316,6 +359,7 @@ app.registerExtension({
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
                 // shrink outputs to 1
                 this.outputs[0].type = "*"
+                setTooltip(this.outputs[0], TOOLTIP_UNPACK_OUTPUT)
                 const output_len = this.outputs.length
                 for (let i = output_len - 1; i > 0; i--) {
                     this.removeOutput(i)
@@ -373,10 +417,11 @@ app.registerExtension({
                                 this.removeOutput(i)
                             }
                             for (let i = cur_len; i < output_len; i++) {
-                                this.addOutput(`${_prefix}_${i + 1}`, origin_inputs[i].type)
+                                addOutputWithTooltip(this, `${_prefix}_${i + 1}`, origin_inputs[i].type, TOOLTIP_UNPACK_OUTPUT)
                             }
                             for (let i = 0; i < cur_len && i < output_len; i++) {
                                 this.outputs[i].type = origin_inputs[i].type
+                                setTooltip(this.outputs[i], TOOLTIP_UNPACK_OUTPUT)
                             }
                         }
                     }

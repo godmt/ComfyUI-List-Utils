@@ -62,16 +62,22 @@ class SplitString:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "STRING": ("STRING", {"multiline": True}),
-                "delimiter": ("STRING", {"default": ","}),
-                "splitlines": ("BOOLEAN", {"default": False}),
-                "strip": ("BOOLEAN", {"default": False})
+                "STRING": ("STRING", {"multiline": True, "tooltip": "Text to split. Multiline text is supported."}),
+                "delimiter": ("STRING", {"default": ",", "tooltip": "Delimiter used inside each line. Leave empty to skip delimiter splitting."}),
+                "splitlines": ("BOOLEAN", {"default": False, "tooltip": "Split the input into lines before applying the delimiter."}),
+                "strip": ("BOOLEAN", {"default": False, "tooltip": "Trim leading and trailing whitespace from each item."})
             }
         }
     
     TITLE = "Split String"
+    DESCRIPTION = "Split text into both a ComfyUI List-processing output and a PyList. Useful for prompt candidates, filenames, seed lists, and other simple batches."
     RETURN_TYPES = ("STRING", "PYLIST", "INT")
     RETURN_NAMES = ("STRING", "PYLIST", "length")
+    OUTPUT_TOOLTIPS = (
+        "Split items as a ComfyUI List-processing output.",
+        "Split items as one raw Python list value.",
+        "Number of split items.",
+    )
     OUTPUT_IS_LIST = (True, False, False, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -105,13 +111,15 @@ class ListGetByIndex:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY": (ANY_TYPE, {"forceInput": True}),
-                "index": ("INT", {"forceInput": False, "default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "ANY": (ANY_TYPE, {"forceInput": True, "tooltip": "Connect a ComfyUI List-processing value."}),
+                "index": ("INT", {"forceInput": False, "default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Item index to read. 0 is the first item, -1 is the last item."}),
             }
         }
     
     TITLE = "List: Get By Index"
+    DESCRIPTION = "Read one item by index from a ComfyUI List-processing input. Use this for List values, not PyList values."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The item at the selected index. Returns None when the index is out of range.",)
     INPUT_IS_LIST = True
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -132,13 +140,15 @@ class PyListGetByIndex:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "PYLIST": ("PYLIST", {"forceInput": True}),
-                "index": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "PYLIST": ("PYLIST", {"forceInput": True, "tooltip": "Connect a PyList, which is a raw Python list value."}),
+                "index": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Item index to read. 0 is the first item, -1 is the last item."}),
             }
         }
     
     TITLE = "PyList: Get By Index"
+    DESCRIPTION = "Read one item by index from a PyList. Use this for raw Python list values, not ComfyUI List-processing values."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The item at the selected index. Returns None when the index is out of range.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -157,14 +167,16 @@ class ListSlice:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY": (ANY_TYPE, {"forceInput": True}),
-                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
-                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "ANY": (ANY_TYPE, {"forceInput": True, "tooltip": "Connect the ComfyUI List-processing value to slice."}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Slice start index, matching Python list[start:end]."}),
+                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Slice end index. The item at this index is not included."}),
             }
         }
     
     TITLE = "List: Slice"
+    DESCRIPTION = "Slice a ComfyUI List-processing input with Python-style start:end semantics and keep it as a List output."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The sliced ComfyUI List-processing output.",)
     INPUT_IS_LIST = True
     OUTPUT_IS_LIST = (True, )
     FUNCTION = "run"
@@ -184,14 +196,16 @@ class PyListSlice:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "PYLIST": ("PYLIST", {"forceInput": True}),
-                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
-                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "PYLIST": ("PYLIST", {"forceInput": True, "tooltip": "Connect the PyList to slice."}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Slice start index, matching Python list[start:end]."}),
+                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Slice end index. The item at this index is not included."}),
             }
         }
     
     TITLE = "PyList: Slice"
+    DESCRIPTION = "Slice a PyList with Python-style start:end semantics and keep it as a PyList output."
     RETURN_TYPES = ("PYLIST", )
+    OUTPUT_TOOLTIPS = ("The sliced PyList.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -207,12 +221,14 @@ class PyListToList:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "PYLIST": ("PYLIST", {"forceInput": True}),
+                "PYLIST": ("PYLIST", {"forceInput": True, "tooltip": "Python list value to expand into ComfyUI List processing."}),
             }
         }
     
     TITLE = "PyList To List"
+    DESCRIPTION = "Convert a PyList into ComfyUI List processing. Use this when downstream nodes should run once per item."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("Each PyList item emitted as a ComfyUI List-processing item.",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -229,13 +245,15 @@ class ListToPyList:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY": (ANY_TYPE, {"forceInput": True}),
+                "ANY": (ANY_TYPE, {"forceInput": True, "tooltip": "ComfyUI List-processing input to collect into one Python list value."}),
             }
         }
     
     TITLE = "List To PyList"
+    DESCRIPTION = "Collect a ComfyUI List-processing input into one PyList value. Use this when you want to stop per-item execution and treat the values as an array."
     RETURN_TYPES = ("PYLIST", )
     RETURN_NAMES = ("PYLIST", )
+    OUTPUT_TOOLTIPS = ("The whole input List collected as one Python list value.",)
     INPUT_IS_LIST = True
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -261,7 +279,9 @@ class CreateList:
         }
     
     TITLE = "Create List"
+    DESCRIPTION = "Create a ComfyUI List-processing output from multiple inputs. Connect the last empty socket to add another input."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("Input values emitted as a ComfyUI List-processing output.",)
     OUTPUT_IS_LIST = (True, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -293,7 +313,9 @@ class CreatePyList:
         }
     
     TITLE = "Create PyList"
+    DESCRIPTION = "Create a PyList from multiple inputs. Use this when you want to keep an array as one value. Connect the last empty socket to add another input."
     RETURN_TYPES = ("PYLIST", )
+    OUTPUT_TOOLTIPS = ("A raw Python list containing the input values.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -324,8 +346,10 @@ class MergeList:
         }
     
     TITLE = "Merge List"
+    DESCRIPTION = "Concatenate multiple ComfyUI List-processing inputs into one List output."
     INPUT_IS_LIST = True
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The concatenated ComfyUI List-processing output.",)
     OUTPUT_IS_LIST = (True, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -360,7 +384,9 @@ class MergePyList:
         }
     
     TITLE = "Merge PyList"
+    DESCRIPTION = "Concatenate multiple PyList inputs as raw Python lists."
     RETURN_TYPES = ("PYLIST", )
+    OUTPUT_TOOLTIPS = ("The concatenated PyList.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -382,15 +408,21 @@ class CreateRange:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
-                "stop": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992}),
-                "step": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "First integer to generate."}),
+                "stop": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Stop boundary. This value is not included."}),
+                "step": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992, "tooltip": "Increment between values, matching Python range()."}),
             },
         }
     
     TITLE = "Create Range"
+    DESCRIPTION = "Generate integers with Python range(start, stop, step), output as both a ComfyUI List and a PyList. Useful for seeds and indexes."
     RETURN_TYPES = ("INT", "PYLIST", "INT")
     RETURN_NAMES = ("INT", "PYLIST", "length")
+    OUTPUT_TOOLTIPS = (
+        "Generated integers as a ComfyUI List-processing output.",
+        "Generated integers as one Python list value.",
+        "Number of generated items.",
+    )
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -408,15 +440,21 @@ class CreateArange:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "start": ("FLOAT", {"default": 0}),
-                "stop": ("FLOAT", {"default": 1}),
-                "step": ("FLOAT", {"default": 1}),
+                "start": ("FLOAT", {"default": 0, "tooltip": "First value to generate."}),
+                "stop": ("FLOAT", {"default": 1, "tooltip": "Stop boundary. This value is usually not included."}),
+                "step": ("FLOAT", {"default": 1, "tooltip": "Increment between values, matching numpy.arange()."}),
             },
         }
     
     TITLE = "Create Arange"
+    DESCRIPTION = "Generate floating-point values with numpy.arange(start, stop, step), output as both a ComfyUI List and a PyList."
     RETURN_TYPES = ("FLOAT", "PYLIST", "INT")
     RETURN_NAMES = ("FLOAT", "PYLIST", "length")
+    OUTPUT_TOOLTIPS = (
+        "Generated values as a ComfyUI List-processing output.",
+        "Generated values as one Python list value.",
+        "Number of generated items.",
+    )
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -434,15 +472,21 @@ class CreateLinspace:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "start": ("FLOAT", {"default": 0}),
-                "stop": ("FLOAT", {"default": 1}),
-                "num": ("INT", {"default": 10, "min": 2}),
+                "start": ("FLOAT", {"default": 0, "tooltip": "First value."}),
+                "stop": ("FLOAT", {"default": 1, "tooltip": "Last value. numpy.linspace() includes this value."}),
+                "num": ("INT", {"default": 10, "min": 2, "tooltip": "Number of values to generate."}),
             },
         }
     
     TITLE = "Create Linspace"
+    DESCRIPTION = "Generate evenly spaced values with numpy.linspace(start, stop, num), output as both a ComfyUI List and a PyList."
     RETURN_TYPES = ("FLOAT", "PYLIST", "INT")
     RETURN_NAMES = ("FLOAT", "PYLIST", "length")
+    OUTPUT_TOOLTIPS = (
+        "Generated values as a ComfyUI List-processing output.",
+        "Generated values as one Python list value.",
+        "Number of generated items.",
+    )
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -469,8 +513,10 @@ class Pack:
         }
     
     TITLE = "Pack"
+    DESCRIPTION = "Bundle multiple values, including different ComfyUI types, into one PACK with each input name, type, and value preserved. Use Unpack to restore them."
     RETURN_TYPES = ("PACK", )
     RETURN_NAMES = ("PACK", )
+    OUTPUT_TOOLTIPS = ("A List-Utils container that preserves input names, types, and values.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -502,7 +548,7 @@ class Unpack:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "PACK": ("PACK", ),
+                "PACK": ("PACK", {"tooltip": "Connect a PACK created by the Pack node. Outputs are rebuilt from its saved names and types."}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -512,8 +558,10 @@ class Unpack:
         }
     
     TITLE = "Unpack"
+    DESCRIPTION = "Extract the original values from a PACK. When connected to Pack, outputs are created from the Pack input names and types."
     RETURN_TYPES = ByPassTypeTuple(("*", ))
     RETURN_NAMES = ByPassTypeTuple(("value_1", ))
+    OUTPUT_TOOLTIPS = ByPassTypeTuple(("A value stored in the PACK. Outputs grow dynamically to match the connected Pack.",))
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -538,13 +586,15 @@ class GetLength:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY" : (ANY_TYPE, {}), 
+                "ANY" : (ANY_TYPE, {"tooltip": "Value to pass to len(). Works with List, PyList, strings, and other values that support len()."}),
             },
         }
     
     TITLE = "Get Length"
+    DESCRIPTION = "Apply Python len() to the input and display the result on the node."
     RETURN_TYPES = ("INT", )
     RETURN_NAMES = ("length", )
+    OUTPUT_TOOLTIPS = ("The result of len(value).",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
     OUTPUT_NODE = True
@@ -562,7 +612,7 @@ class GetShape:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "tensor" : ("IMAGE,LATENT,MASK", {}), 
+                "tensor" : ("IMAGE,LATENT,MASK", {"tooltip": "IMAGE, LATENT, or MASK whose shape you want to inspect."}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -572,8 +622,15 @@ class GetShape:
         }
     
     TITLE = "Get Shape"
+    DESCRIPTION = "Inspect width, height, batch size, and channels for IMAGE, LATENT, or MASK inputs. LATENT dimensions are converted to image-space size."
     RETURN_TYPES = ("INT", "INT", "INT", "INT")
     RETURN_NAMES = ("width", "height", "PyList_size", "channels")
+    OUTPUT_TOOLTIPS = (
+        "Width. LATENT inputs are multiplied by 8 to report image-space width.",
+        "Height. LATENT inputs are multiplied by 8 to report image-space height.",
+        "Batch size. The output name is PyList_size for compatibility with existing workflows.",
+        "Channel count. MASK inputs may be reported as 1 channel.",
+    )
     FUNCTION = "run"
     CATEGORY = "list_utils"
     OUTPUT_NODE = True
@@ -625,13 +682,18 @@ class AnyToDict:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY" : (ANY_TYPE, {}), 
+                "ANY" : (ANY_TYPE, {"tooltip": "Any value to inspect. dict values pass through; objects with __dict__ are converted with vars()."}),
             },
         }
     
     TITLE = "Any To Dict"
+    DESCRIPTION = "Convert any value to a dict when possible and also return its string representation. Intended for debugging."
     RETURN_TYPES = ("DICT", "STRING")
     RETURN_NAMES = ("DICT", "str()")
+    OUTPUT_TOOLTIPS = (
+        "The value as a dict. Returns an empty dict when conversion is not available.",
+        "The str() representation of the input value.",
+    )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -653,7 +715,7 @@ class GetWidgetsValues:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY" : (ANY_TYPE, {}), 
+                "ANY" : (ANY_TYPE, {"tooltip": "Connect any output from the node whose widget values you want to inspect. The value is used only to locate the upstream node."}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -663,8 +725,10 @@ class GetWidgetsValues:
         }
     
     TITLE = "Get Widgets Values"
+    DESCRIPTION = "Read and display the upstream node's widgets_values. Intended for debugging node settings."
     RETURN_TYPES = ("LIST", )
     RETURN_NAMES = ("LIST", )
+    OUTPUT_TOOLTIPS = ("The upstream node's widgets_values list.",)
     OUTPUT_NODE = True
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -716,13 +780,15 @@ class AnyCast:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "ANY" : (ANY_TYPE, {}),
-                "TYPE": (["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING", "PYLIST"], {}),
+                "ANY" : (ANY_TYPE, {"tooltip": "Value to relabel or convert."}),
+                "TYPE": (["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING", "PYLIST"], {"tooltip": "ComfyUI type shown on the output socket. STRING, INT, FLOAT, and BOOLEAN also attempt Python conversion."}),
             },
         }
     
     TITLE = "Any Cast"
+    DESCRIPTION = "Output any value as the selected ComfyUI type. STRING, INT, FLOAT, and BOOLEAN also perform Python conversion."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The value output as the selected TYPE.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -739,14 +805,16 @@ class PyListItemCast:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "PYLIST": ("PYLIST", {"forceInput": True}),
-                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN", "PYLIST"], {}),
+                "PYLIST": ("PYLIST", {"forceInput": True, "tooltip": "PyList whose items should be converted."}),
+                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN", "PYLIST"], {"tooltip": "Conversion applied to each PyList item. NUMBER is the same as FLOAT."}),
             },
         }
     
     TITLE = "PyList Item Cast"
+    DESCRIPTION = "Convert each item inside a PyList to STRING, INT, FLOAT, BOOLEAN, and similar basic types."
     RETURN_TYPES = ("PYLIST", )
     RETURN_NAMES = ("PYLIST", )
+    OUTPUT_TOOLTIPS = ("The PyList after converting each item.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -763,8 +831,8 @@ class ListDir:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "path": ("STRING", {"default": ""}),
-                "pattern": ("STRING", {"default": "*"})
+                "path": ("STRING", {"default": "", "tooltip": "Folder path to list."}),
+                "pattern": ("STRING", {"default": "*", "tooltip": "Pattern passed to Path.glob, for example *.png or **/*.json."})
             },
             "optional": {},
             "hidden": {
@@ -775,8 +843,14 @@ class ListDir:
         }
     
     TITLE = "List Dir"
+    DESCRIPTION = "List files and folders under a path using a glob pattern, output as both a ComfyUI List and a PyList."
     RETURN_TYPES = ("STRING", "PYLIST", "INT")
     RETURN_NAMES = ("STRING", "PYLIST", "length")
+    OUTPUT_TOOLTIPS = (
+        "Matched items as a ComfyUI List-processing output. Values are Path objects.",
+        "Matched items as one Python list value.",
+        "Number of matched items.",
+    )
     OUTPUT_IS_LIST = (True, False, False, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -826,7 +900,7 @@ class Exec:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "FUNC": ("STRING", {"forceInput": False, "multiline": True, "default": "result = x[0]"})
+                "FUNC": ("STRING", {"forceInput": False, "multiline": True, "default": "result = x[0]", "tooltip": "Python code to execute. Input values are x[0], x[1], ... Assign the value to return to result."})
             },
             "optional": {},
             "hidden": {
@@ -837,7 +911,9 @@ class Exec:
         }
     
     TITLE = "Exec"
+    DESCRIPTION = "Execute Python code with input values available as x[0], x[1], ... and return result. Use only in trusted workflows."
     RETURN_TYPES = (ANY_TYPE, )
+    OUTPUT_TOOLTIPS = ("The value assigned to result inside FUNC.",)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 

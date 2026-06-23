@@ -106,7 +106,7 @@ class ListGetByIndex:
         return {
             "required": {
                 "ANY": (ANY_TYPE, {"forceInput": True}),
-                "index": ("INT", {"forceInput": False, "default": 0}),
+                "index": ("INT", {"forceInput": False, "default": 0, "min": -9007199254740992, "max": 9007199254740992}),
             }
         }
     
@@ -133,7 +133,7 @@ class PyListGetByIndex:
         return {
             "required": {
                 "PYLIST": ("PYLIST", {"forceInput": True}),
-                "index": ("INT", {"default": 0}),
+                "index": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
             }
         }
     
@@ -158,8 +158,8 @@ class ListSlice:
         return {
             "required": {
                 "ANY": (ANY_TYPE, {"forceInput": True}),
-                "start": ("INT", {"default": 0, "min": -9007199254740991}),
-                "end": ("INT", {"default": 0, "min": -9007199254740991}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
             }
         }
     
@@ -185,8 +185,8 @@ class PyListSlice:
         return {
             "required": {
                 "PYLIST": ("PYLIST", {"forceInput": True}),
-                "start": ("INT", {"default": 0, "min": -9007199254740991}),
-                "end": ("INT", {"default": 0, "min": -9007199254740991}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "end": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
             }
         }
     
@@ -382,9 +382,9 @@ class CreateRange:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "start": ("INT", {"default": 0, "min": -9007199254740991}),
-                "stop": ("INT", {"default": 1, "min": -9007199254740991}),
-                "step": ("INT", {"default": 1, "min": -9007199254740991}),
+                "start": ("INT", {"default": 0, "min": -9007199254740992, "max": 9007199254740992}),
+                "stop": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992}),
+                "step": ("INT", {"default": 1, "min": -9007199254740992, "max": 9007199254740992}),
             },
         }
     

@@ -717,7 +717,7 @@ class AnyCast:
         return {
             "required": {
                 "ANY" : (ANY_TYPE, {}),
-                "TYPE": (["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"], {}),
+                "TYPE": (["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING", "PYLIST"], {}),
             },
         }
     
@@ -740,7 +740,7 @@ class PyListItemCast:
         return {
             "required": {
                 "PYLIST": ("PYLIST", {"forceInput": True}),
-                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN"], {}),
+                "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN", "PYLIST"], {}),
             },
         }
     

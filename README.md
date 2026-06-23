@@ -1,5 +1,5 @@
 # ComfyUI-List-Utils
-LIST and BATCH utilities which support: create, convert, get or slice items
+Comfy List and Python list (PyList) utilities which support: create, merge, convert, get or slice
 ## Installation
 goto ComfyUI/custom_nodes dir in terminal(cmd)  
 git clone https://github.com/godmt/ComfyUI-List-Utils.git  

@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-list-utils"
-description = "LIST and BATCH utilities which support: create, convert, get or slice items"
-version = "1.5.0"
+description = "Comfy List and Python list (PyList) utilities which support: create, merge, convert, get or slice"
+version = "2.0.0"
 license = { file = "LICENSE" }
 
 [project.urls]

@@ -70,8 +70,8 @@ class SplitString:
         }
     
     TITLE = "Split String"
-    RETURN_TYPES = ("STRING", "LIST", "INT")
-    RETURN_NAMES = ("STRING", "LIST", "length")
+    RETURN_TYPES = ("STRING", "PYLIST", "INT")
+    RETURN_NAMES = ("STRING", "PYLIST", "length")
     OUTPUT_IS_LIST = (True, False, False, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -124,7 +124,7 @@ class ListGetByIndex:
         return (ANY[index], )
 
 
-class BatchGetByIndex:
+class PyListGetByIndex:
     def __init__(self):
         pass
 
@@ -132,21 +132,21 @@ class BatchGetByIndex:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "LIST": ("LIST", {"forceInput": True}),
+                "PYLIST": ("PYLIST", {"forceInput": True}),
                 "index": ("INT", {"default": 0}),
             }
         }
     
-    TITLE = "Batch: Get By Index"
+    TITLE = "PyList: Get By Index"
     RETURN_TYPES = (ANY_TYPE, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
-    def run(self, LIST: list, index: int):
-        if index >= len(LIST):
+    def run(self, PYLIST: list, index: int):
+        if index >= len(PYLIST):
             print("Error: index out of range")
             return (None, )
-        return (LIST[index], )
+        return (PYLIST[index], )
 
 
 class ListSlice:
@@ -176,7 +176,7 @@ class ListSlice:
         return (ANY[start:end], )
 
 
-class BatchSlice:
+class PyListSlice:
     def __init__(self):
         pass
 
@@ -184,22 +184,22 @@ class BatchSlice:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "LIST": ("LIST", {"forceInput": True}),
+                "PYLIST": ("PYLIST", {"forceInput": True}),
                 "start": ("INT", {"default": 0, "min": -9007199254740991}),
                 "end": ("INT", {"default": 0, "min": -9007199254740991}),
             }
         }
     
-    TITLE = "Batch: Slice"
-    RETURN_TYPES = ("LIST", )
+    TITLE = "PyList: Slice"
+    RETURN_TYPES = ("PYLIST", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
-    def run(self, LIST: list, start: int, end: int):
-        return (LIST[start:end], )
+    def run(self, PYLIST: list, start: int, end: int):
+        return (PYLIST[start:end], )
 
 
-class BatchToList:
+class PyListToList:
     def __init__(self):
         pass
 
@@ -207,21 +207,21 @@ class BatchToList:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "LIST": ("LIST", {"forceInput": True}),
+                "PYLIST": ("PYLIST", {"forceInput": True}),
             }
         }
     
-    TITLE = "Batch To List"
+    TITLE = "PyList To List"
     RETURN_TYPES = (ANY_TYPE, )
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
-    def run(self, LIST: list):
-        return (LIST, )
+    def run(self, PYLIST: list):
+        return (PYLIST, )
 
 
-class ListToBatch:
+class ListToPyList:
     def __init__(self):
         pass
 
@@ -233,9 +233,9 @@ class ListToBatch:
             }
         }
     
-    TITLE = "List To Batch"
-    RETURN_TYPES = ("LIST", )
-    RETURN_NAMES = ("LIST", )
+    TITLE = "List To PyList"
+    RETURN_TYPES = ("PYLIST", )
+    RETURN_NAMES = ("PYLIST", )
     INPUT_IS_LIST = True
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -276,7 +276,7 @@ class CreateList:
         return (output_list, )
 
 
-class CreateBatch:
+class CreatePyList:
     def __init__(self):
         pass
 
@@ -292,8 +292,8 @@ class CreateBatch:
             },
         }
     
-    TITLE = "Create Batch"
-    RETURN_TYPES = ("LIST", )
+    TITLE = "Create PyList"
+    RETURN_TYPES = ("PYLIST", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -343,7 +343,7 @@ class MergeList:
         return (output_list, )
 
 
-class MergeBatch:
+class MergePyList:
     def __init__(self):
         pass
 
@@ -359,8 +359,8 @@ class MergeBatch:
             },
         }
     
-    TITLE = "Merge Batch"
-    RETURN_TYPES = ("LIST", )
+    TITLE = "Merge PyList"
+    RETURN_TYPES = ("PYLIST", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
@@ -389,8 +389,8 @@ class CreateRange:
         }
     
     TITLE = "Create Range"
-    RETURN_TYPES = ("INT", "LIST", "INT")
-    RETURN_NAMES = ("INT", "LIST", "length")
+    RETURN_TYPES = ("INT", "PYLIST", "INT")
+    RETURN_NAMES = ("INT", "PYLIST", "length")
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -415,8 +415,8 @@ class CreateArange:
         }
     
     TITLE = "Create Arange"
-    RETURN_TYPES = ("FLOAT", "LIST", "INT")
-    RETURN_NAMES = ("FLOAT", "LIST", "length")
+    RETURN_TYPES = ("FLOAT", "PYLIST", "INT")
+    RETURN_NAMES = ("FLOAT", "PYLIST", "length")
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -441,8 +441,8 @@ class CreateLinspace:
         }
     
     TITLE = "Create Linspace"
-    RETURN_TYPES = ("FLOAT", "LIST", "INT")
-    RETURN_NAMES = ("FLOAT", "LIST", "length")
+    RETURN_TYPES = ("FLOAT", "PYLIST", "INT")
+    RETURN_NAMES = ("FLOAT", "PYLIST", "length")
     OUTPUT_IS_LIST = (True, False, False)
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -573,7 +573,7 @@ class GetShape:
     
     TITLE = "Get Shape"
     RETURN_TYPES = ("INT", "INT", "INT", "INT")
-    RETURN_NAMES = ("width", "height", "batch_size", "channels")
+    RETURN_NAMES = ("width", "height", "PyList_size", "channels")
     FUNCTION = "run"
     CATEGORY = "list_utils"
     OUTPUT_NODE = True
@@ -731,7 +731,7 @@ class AnyCast:
         return (result, )
 
 
-class BatchItemCast:
+class PyListItemCast:
     def __init__(self):
         pass
 
@@ -739,19 +739,19 @@ class BatchItemCast:
     def INPUT_TYPES(self):
         return {
             "required": {
-                "LIST": ("LIST", {"forceInput": True}),
+                "PYLIST": ("PYLIST", {"forceInput": True}),
                 "TYPE": (["STRING", "INT", "FLOAT", "NUMBER", "BOOLEAN"], {}),
             },
         }
     
-    TITLE = "Batch Item Cast"
-    RETURN_TYPES = ("LIST", )
-    RETURN_NAMES = ("LIST", )
+    TITLE = "PyList Item Cast"
+    RETURN_TYPES = ("PYLIST", )
+    RETURN_NAMES = ("PYLIST", )
     FUNCTION = "run"
     CATEGORY = "list_utils"
 
-    def run(self, LIST: list, TYPE: str):
-        converted_list = [try_cast(x, TYPE) for x in LIST]
+    def run(self, PYLIST: list, TYPE: str):
+        converted_list = [try_cast(x, TYPE) for x in PYLIST]
         return (converted_list, )
 
 
@@ -775,8 +775,8 @@ class ListDir:
         }
     
     TITLE = "List Dir"
-    RETURN_TYPES = ("STRING", "LIST", "INT")
-    RETURN_NAMES = ("STRING", "LIST", "length")
+    RETURN_TYPES = ("STRING", "PYLIST", "INT")
+    RETURN_NAMES = ("STRING", "PYLIST", "length")
     OUTPUT_IS_LIST = (True, False, False, )
     FUNCTION = "run"
     CATEGORY = "list_utils"
@@ -864,15 +864,15 @@ class Exec:
 NODE_CLASS_MAPPINGS = {
     "GODMT_SplitString": SplitString,
     "GODMT_ListGetByIndex": ListGetByIndex,
-    "GODMT_BatchGetByIndex": BatchGetByIndex,
+    "GODMT_PyListGetByIndex": PyListGetByIndex,
     "GODMT_ListSlice": ListSlice,
-    "GODMT_BatchSlice": BatchSlice,
-    "GODMT_ListToBatch": ListToBatch,
-    "GODMT_BatchToList": BatchToList,
+    "GODMT_PyListSlice": PyListSlice,
+    "GODMT_ListToPyList": ListToPyList,
+    "GODMT_PyListToList": PyListToList,
     "GODMT_CreateList": CreateList,
-    "GODMT_CreateBatch": CreateBatch,
+    "GODMT_CreatePyList": CreatePyList,
     "GODMT_MergeList": MergeList,
-    "GODMT_MergeBatch": MergeBatch,
+    "GODMT_MergePyList": MergePyList,
     "GODMT_CreateRange": CreateRange,
     "GODMT_CreateArange": CreateArange,
     "GODMT_CreateLinspace": CreateLinspace,
@@ -883,7 +883,7 @@ NODE_CLASS_MAPPINGS = {
     "GODMT_AnyToDict": AnyToDict,
     "GODMT_GetWidgetsValues": GetWidgetsValues,
     "GODMT_AnyCast": AnyCast,
-    "GODMT_BatchItemCast": BatchItemCast,
+    "GODMT_PyListItemCast": PyListItemCast,
     "GODMT_ListDir": ListDir,
     "GODMT_Exec": Exec,
 }

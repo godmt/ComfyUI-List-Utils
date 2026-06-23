@@ -92,7 +92,7 @@ function renderTable(data, container) {
 app.registerExtension({
     name: "godmt.ListUtils",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreateBatch") {
+        if (nodeData.name === "GODMT_Pack" || nodeData.name === "GODMT_CreatePyList") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
@@ -270,11 +270,11 @@ app.registerExtension({
                 }
                 return r
             }
-        } else if (nodeData.name == "GODMT_MergeBatch") {
+        } else if (nodeData.name == "GODMT_MergePyList") {
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
-                this.addInput(`${_prefix}_1`, 'LIST')
+                this.addInput(`${_prefix}_1`, 'PYLIST')
                 return r
             }
 
@@ -287,7 +287,7 @@ app.registerExtension({
                     for (let i = length - 1; i >= 0; i--) {
                         this.removeInput(i)
                     }
-                    this.addInput(`${_prefix}_1`, 'LIST')
+                    this.addInput(`${_prefix}_1`, 'PYLIST')
                 }
                 return r
             }
@@ -296,7 +296,7 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, 'LIST')
+                    dynamic_connection(this, slot, event, `${_prefix}_`, 'PYLIST')
                     if (event === TypeSlotEvent.Connect && link_info) {
                         const fromNode = this.graph._nodes.find(
                             (otherNode) => otherNode.id == link_info.origin_id
@@ -304,7 +304,7 @@ app.registerExtension({
                         const type = fromNode.outputs[link_info.origin_slot].type
                         this.inputs[slot].type = type
                     } else if (event === TypeSlotEvent.Disconnect) {
-                        this.inputs[slot].type = 'LIST'
+                        this.inputs[slot].type = 'PYLIST'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                     }
                 }
@@ -389,12 +389,14 @@ app.registerExtension({
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
                 const onWidgetChanged = this.widgets[0].callback
                 const thisNode = this
+                this.widgets[0].options.values = getWorkflowTypes(app)
                 const output_type = thisNode.widgets[0].value
                 thisNode.outputs[0].type = output_type
                 thisNode.outputs[0].label = output_type
                 thisNode.outputs[0].name = output_type
                 this.widgets[0].callback = function () {
                     const me = onWidgetChanged ? onWidgetChanged.apply(this, arguments) : undefined
+                    this.widgets[0].options.values = getWorkflowTypes(app)
                     const output_type = thisNode.widgets[0].value
                     thisNode.outputs[0].type = output_type
                     thisNode.outputs[0].label = output_type
@@ -407,6 +409,7 @@ app.registerExtension({
             const onConfigure = nodeType.prototype.onConfigure
             nodeType.prototype.onConfigure = function () {
                 const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
+                this.widgets[0].options.values = getWorkflowTypes(app)
                 const output_type = this.widgets[0].value
                 this.outputs[0].type = output_type
                 this.outputs[0].label = output_type
@@ -421,8 +424,7 @@ app.registerExtension({
                         const origin_node = app.graph.getNodeById(link_info.origin_id)
                         const origin_slot = origin_node.outputs[link_info.origin_slot]
                         const origin_type = origin_slot.type
-                        const types = getWorkflowTypes(app)
-                        this.widgets[0].options.values = types
+                        this.widgets[0].options.values = getWorkflowTypes(app)
                         const output_type = this.widgets[0].value
                         this.outputs[0].type = output_type
                         this.outputs[0].label = output_type

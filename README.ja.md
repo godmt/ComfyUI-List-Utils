@@ -134,7 +134,7 @@ List-Utils の `List` 系ノードは、ComfyUI の `OUTPUT_IS_LIST` / `INPUT_IS
 | `Get Length` | `INT` | `len(value)` を返し、ノード上にも表示します。 |
 | `Get Shape` | `width`, `height`, `PyList_size`, `channels` | `IMAGE`、`LATENT`、`MASK` の形状を取得します。 |
 | `Any To Dict` | `DICT`, `str()` | オブジェクトを dict または文字列に変換して確認します。 |
-| `Get Widgets Values` | `LIST` | 接続元ノードの widget values を取得して表示します。 |
+| `Get Widgets Values` | `PYLIST` | 接続元ノードの widget values を取得して表示します。 |
 | `Any Cast` | selected type | 値を指定型として出力します。基本的な `STRING` / `INT` / `FLOAT` / `BOOLEAN` 変換にも使えます。 |
 | `PyList Item Cast` | `PYLIST` | PyList 内の各要素を `STRING` / `INT` / `FLOAT` / `BOOLEAN` などへ変換します。 |
 | `Exec` | any | 入力値 `x[0]`, `x[1]`, ... を使って Python コードを実行し、`result` を返します。 |

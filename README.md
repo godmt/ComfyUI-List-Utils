@@ -135,7 +135,7 @@ Use `List To PyList` for the opposite direction, when you want to collect a Comf
 | `Get Length` | `INT` | Returns `len(value)` and displays it on the node. |
 | `Get Shape` | `width`, `height`, `PyList_size`, `channels` | Reads shape information from `IMAGE`, `LATENT`, or `MASK`. |
 | `Any To Dict` | `DICT`, `str()` | Converts an object to a dict when possible and also returns `str(value)`. |
-| `Get Widgets Values` | `LIST` | Reads and displays widget values from the connected upstream node. |
+| `Get Widgets Values` | `PYLIST` | Reads and displays widget values from the connected upstream node. |
 | `Any Cast` | selected type | Relabels a value as a selected type and converts basic scalar types when possible. |
 | `PyList Item Cast` | `PYLIST` | Converts each item inside a PyList to `STRING`, `INT`, `FLOAT`, `BOOLEAN`, and similar types. |
 | `Exec` | any | Runs Python code using inputs as `x[0]`, `x[1]`, ... and returns `result`. |

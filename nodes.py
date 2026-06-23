@@ -726,8 +726,8 @@ class GetWidgetsValues:
     
     TITLE = "Get Widgets Values"
     DESCRIPTION = "Read and display the upstream node's widgets_values. Intended for debugging node settings."
-    RETURN_TYPES = ("LIST", )
-    RETURN_NAMES = ("LIST", )
+    RETURN_TYPES = ("PYLIST", )
+    RETURN_NAMES = ("PYLIST", )
     OUTPUT_TOOLTIPS = ("The upstream node's widgets_values list.",)
     OUTPUT_NODE = True
     FUNCTION = "run"

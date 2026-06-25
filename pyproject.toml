@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-list-utils"
 description = "Primitive ComfyUI custom nodes for working with ComfyUI List processing, raw Python list values, and typed value bundles."
-version = "2.0.0"
+version = "2.1.0"
 license = { file = "LICENSE" }
 
 [project.urls]

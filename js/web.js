@@ -40,6 +40,89 @@ const addOutputWithTooltip = (node, name, type, tooltip) => {
     return setTooltip(node.outputs?.[index], tooltip)
 }
 
+const findNodeById = (graph, id) => {
+    return graph?.getNodeById?.(id)
+        ?? graph?._nodes?.find((node) => node.id == id)
+}
+
+const normalizeLink = (link) => {
+    if (!Array.isArray(link)) {
+        return link
+    }
+    return {
+        id: link[0],
+        origin_id: link[1],
+        origin_slot: link[2],
+        target_id: link[3],
+        target_slot: link[4],
+        type: link[5],
+    }
+}
+
+const findLinkById = (graph, id) => {
+    if (id === undefined || id === null) {
+        return undefined
+    }
+    const links = graph?.links ?? graph?._links
+    const direct = links?.get?.(id)
+        ?? links?.get?.(String(id))
+        ?? links?.[id]
+        ?? links?.[String(id)]
+    if (direct) {
+        return normalizeLink(direct)
+    }
+    if (Array.isArray(links)) {
+        return normalizeLink(links.find((link) => {
+            const normalized = normalizeLink(link)
+            return normalized?.id == id
+        }))
+    }
+}
+
+const getOriginType = (node, linkInfo, app) => {
+    if (!linkInfo) {
+        return undefined
+    }
+
+    // Subgraph nodes must resolve links against their own graph. During graph
+    // configuration the origin node may not exist yet, so keep the serialized
+    // link type as a safe fallback.
+    const originNode = findNodeById(node?.graph, linkInfo.origin_id)
+        ?? findNodeById(app?.graph, linkInfo.origin_id)
+    return originNode?.outputs?.[linkInfo.origin_slot]?.type
+        ?? linkInfo.type
+}
+
+const findPackOrigin = (node, linkInfo, app) => {
+    if (!linkInfo) {
+        return undefined
+    }
+
+    let graph = node?.graph ?? app?.graph
+    let originId = linkInfo.origin_id
+    for (let depth = 0; depth < 20; depth++) {
+        let originNode = findNodeById(graph, originId)
+        if (!originNode && graph !== app?.graph) {
+            graph = app?.graph
+            originNode = findNodeById(graph, originId)
+        }
+        if (!originNode) {
+            return undefined
+        }
+        if (originNode.type === "GODMT_Pack") {
+            return originNode
+        }
+
+        const originInput = originNode.inputs?.find((input) => input.type === "PACK")
+            ?? originNode.inputs?.find((input) => input.type === "*")
+        const upstreamLink = findLinkById(graph, originInput?.link)
+        if (!upstreamLink) {
+            return undefined
+        }
+        originId = upstreamLink.origin_id
+    }
+}
+
 const dynamic_connection = (
     node,
     index,
@@ -49,9 +132,11 @@ const dynamic_connection = (
     names = [],
     tooltip = ""
 ) => {
-    if (!node.inputs[index].name.startsWith(prefix)) {
-        return
+    const input = node.inputs?.[index]
+    if (!input?.name?.startsWith(prefix)) {
+        return false
     }
+    let removed = false
     // remove all non connected inputs
     if (event == TypeSlotEvent.Disconnect && node.inputs.length > 1) {
         if (node.widgets) {
@@ -62,6 +147,7 @@ const dynamic_connection = (
             }
         }
         node.removeInput(index)
+        removed = true
 
         // TODO type
         // make inputs sequential again
@@ -74,27 +160,35 @@ const dynamic_connection = (
     }
 
     // add an extra input
-    if (node.inputs[node.inputs.length - 1].link != undefined) {
+    if (node.inputs?.length && node.inputs[node.inputs.length - 1].link != undefined) {
         const nextIndex = node.inputs.length
         const name = nextIndex < names.length
             ? names[nextIndex]
             : `${prefix}${nextIndex + 1}`
         addInputWithTooltip(node, name, type, tooltip)
     }
+    return removed
 }
 
 /**
  * Get all unique types in the workflow.
  * @returns {Set} Unique set of all types used in the workflow
  */
-function getWorkflowTypes(app) {
+function getWorkflowTypes(app, currentNode) {
     const types = new Set(["*", "STRING", "INT", "FLOAT", "BOOLEAN", "IMAGE", "LATENT", "MASK", "NOISE", "SAMPLER", "SIGMAS", "GUIDER", "MODEL", "CLIP", "VAE", "CONDITIONING"])
-    app.graph._nodes.forEach(node => {
-        node.inputs.forEach(slot => {
-            types.add(slot.type)
-        })
-        node.outputs.forEach(slot => {
-            types.add(slot.type)
+    const graphs = new Set([app?.graph, currentNode?.graph])
+    graphs.forEach((graph) => {
+        graph?._nodes?.forEach(node => {
+            node.inputs?.forEach(slot => {
+                if (slot?.type) {
+                    types.add(slot.type)
+                }
+            })
+            node.outputs?.forEach(slot => {
+                if (slot?.type) {
+                    types.add(slot.type)
+                }
+            })
         })
     })
     return Array.from(types)
@@ -154,15 +248,14 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, '*', [], inputTooltip)
+                    const removed = dynamic_connection(this, slot, event, `${_prefix}_`, '*', [], inputTooltip)
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        const fromNode = this.graph._nodes.find(
-                            (otherNode) => otherNode.id == link_info.origin_id
-                        )
-                        const type = fromNode.outputs[link_info.origin_slot].type
-                        this.inputs[slot].type = type
-                        setTooltip(this.inputs[slot], inputTooltip)
-                    } else if (event === TypeSlotEvent.Disconnect) {
+                        const type = getOriginType(this, link_info, app)
+                        if (type !== undefined && this.inputs?.[slot]) {
+                            this.inputs[slot].type = type
+                            setTooltip(this.inputs[slot], inputTooltip)
+                        }
+                    } else if (event === TypeSlotEvent.Disconnect && !removed && this.inputs?.[slot]) {
                         this.inputs[slot].type = '*'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                         setTooltip(this.inputs[slot], inputTooltip)
@@ -197,7 +290,7 @@ app.registerExtension({
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     // remove all disconnected inputs
-                    if (event == TypeSlotEvent.Disconnect && this.inputs.length > 1) {
+                    if (event == TypeSlotEvent.Disconnect && this.inputs?.[slot] && this.inputs.length > 1) {
                         if (this.widgets) {
                             const widget = this.widgets.find((w) => w.name === this.inputs[slot].name)
                             if (widget) {
@@ -225,12 +318,11 @@ app.registerExtension({
                     }
 
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        const fromNode = this.graph._nodes.find(
-                            (otherNode) => otherNode.id == link_info.origin_id
-                        )
-                        const type = fromNode.outputs[link_info.origin_slot].type
-                        this.inputs[slot].type = type
-                        setTooltip(this.inputs[slot], TOOLTIP_EXEC_INPUT)
+                        const type = getOriginType(this, link_info, app)
+                        if (type !== undefined && this.inputs?.[slot]) {
+                            this.inputs[slot].type = type
+                            setTooltip(this.inputs[slot], TOOLTIP_EXEC_INPUT)
+                        }
                     } else if (event === TypeSlotEvent.Disconnect) {
                         // this.inputs[slot].type = '*'
                         // this.inputs[slot].label = `x[${slot}]`
@@ -270,18 +362,19 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    if (!this.inputs[slot].name.startsWith(_prefix)) {
+                    if (!this.inputs?.[slot]?.name?.startsWith(_prefix)) {
                         return
                     }
 
                     if (event == TypeSlotEvent.Connect && link_info) {
                         if (slot == 0) {
-                            const node = app.graph.getNodeById(link_info.origin_id)
-                            const origin_type = node.outputs[link_info.origin_slot].type
-                            this.inputs[0].type = origin_type
-                            this.outputs[0].type = origin_type
-                            this.outputs[0].label = origin_type
-                            this.outputs[0].name = origin_type
+                            const origin_type = getOriginType(this, link_info, app)
+                            if (origin_type !== undefined) {
+                                this.inputs[0].type = origin_type
+                                this.outputs[0].type = origin_type
+                                this.outputs[0].label = origin_type
+                                this.outputs[0].name = origin_type
+                            }
                         }
                     }
 
@@ -295,16 +388,29 @@ app.registerExtension({
                             }
                         }
                         this.removeInput(slot)
+                        if (this.inputs.length === 0) {
+                            addInputWithTooltip(this, `${_prefix}_1`, '*', TOOLTIP_VALUE_INPUT)
+                        }
                         // make inputs sequential again
                         for (let i = 0; i < this.inputs.length; i++) {
                             this.inputs[i].label = `${_prefix}_${i + 1}`
                             this.inputs[i].name = `${_prefix}_${i + 1}`
                             setTooltip(this.inputs[i], TOOLTIP_VALUE_INPUT)
                         }
+                        const firstLink = findLinkById(this.graph, this.inputs[0]?.link)
+                        const firstType = getOriginType(this, firstLink, app) ?? "*"
+                        if (this.inputs[0]) {
+                            this.inputs[0].type = firstType
+                        }
+                        if (this.outputs?.[0]) {
+                            this.outputs[0].type = firstType
+                            this.outputs[0].label = firstType
+                            this.outputs[0].name = firstType
+                        }
                     }
 
                     // add an extra input
-                    if (this.inputs[this.inputs.length - 1].link != undefined) {
+                    if (this.inputs?.length && this.inputs[this.inputs.length - 1].link != undefined) {
                         const nextIndex = this.inputs.length
                         addInputWithTooltip(this, `${_prefix}_${nextIndex + 1}`, this.inputs[0].type, TOOLTIP_VALUE_INPUT)
                     }
@@ -337,15 +443,14 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
-                    dynamic_connection(this, slot, event, `${_prefix}_`, 'PYLIST', [], TOOLTIP_PYLIST_INPUT)
+                    const removed = dynamic_connection(this, slot, event, `${_prefix}_`, 'PYLIST', [], TOOLTIP_PYLIST_INPUT)
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        const fromNode = this.graph._nodes.find(
-                            (otherNode) => otherNode.id == link_info.origin_id
-                        )
-                        const type = fromNode.outputs[link_info.origin_slot].type
-                        this.inputs[slot].type = type
-                        setTooltip(this.inputs[slot], TOOLTIP_PYLIST_INPUT)
-                    } else if (event === TypeSlotEvent.Disconnect) {
+                        const type = getOriginType(this, link_info, app)
+                        if (type !== undefined && this.inputs?.[slot]) {
+                            this.inputs[slot].type = type
+                            setTooltip(this.inputs[slot], TOOLTIP_PYLIST_INPUT)
+                        }
+                    } else if (event === TypeSlotEvent.Disconnect && !removed && this.inputs?.[slot]) {
                         this.inputs[slot].type = 'PYLIST'
                         this.inputs[slot].label = `${_prefix}_${slot + 1}`
                         setTooltip(this.inputs[slot], TOOLTIP_PYLIST_INPUT)
@@ -358,9 +463,12 @@ app.registerExtension({
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
                 // shrink outputs to 1
+                if (!this.outputs?.length) {
+                    addOutputWithTooltip(this, `${_prefix}_1`, "*", TOOLTIP_UNPACK_OUTPUT)
+                }
                 this.outputs[0].type = "*"
                 setTooltip(this.outputs[0], TOOLTIP_UNPACK_OUTPUT)
-                const output_len = this.outputs.length
+                const output_len = this.outputs?.length ?? 0
                 for (let i = output_len - 1; i > 0; i--) {
                     this.removeOutput(i)
                 }
@@ -372,57 +480,41 @@ app.registerExtension({
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        // find the origin Pack
-                        let link_id = this.inputs[slot]?.link
-                        let origin_id = app.graph.links[link_id]?.origin_id
-                        let origin_node = null
-                        for (let i = 0; i < 10; i++) {
-                            origin_node = app.graph._nodes.find(n => n.id == origin_id)
-                            if (!origin_node) {
-                                break
-                            }
-                            if (origin_node.type === "GODMT_Pack") {
-                                break
-                            }
-                            if (origin_node.inputs.length == 0) {
-                                origin_node = null
-                                break
-                            }
-                            let origin_slot = -1
-                            for (let i in origin_node.inputs) {
-                                if (origin_node.inputs[i].type === "PACK") {
-                                    origin_slot = i
-                                    break
-                                } else if (origin_node.inputs[i].type === "*") {
-                                    origin_slot = i
-                                }
-                            }
-                            if (origin_slot == -1) {
-                                origin_node = null
-                                break
-                            }
-                            link_id = origin_node.inputs[origin_slot]?.link
-                            origin_id = app.graph.links[link_id]?.origin_id
-                            if (!origin_id) {
-                                break
-                            }
-                            origin_node = null
-                        }
-                        // must be GODMT_Pack, but double check
-                        if (origin_node && origin_node.type === "GODMT_Pack") {
-                            const origin_inputs = origin_node.inputs
-                            const output_len = origin_inputs.length - 1  // end is empty socket
-                            const cur_len = this.outputs.length
+                        const origin_node = findPackOrigin(this, link_info, app)
+                        if (origin_node) {
+                            const origin_inputs = origin_node.inputs ?? []
+                            const output_len = Math.max(origin_inputs.length - 1, 1)  // end is empty socket
+                            const cur_len = this.outputs?.length ?? 0
                             for (let i = cur_len - 1; i >= output_len; i--) {
                                 this.removeOutput(i)
                             }
                             for (let i = cur_len; i < output_len; i++) {
-                                addOutputWithTooltip(this, `${_prefix}_${i + 1}`, origin_inputs[i].type, TOOLTIP_UNPACK_OUTPUT)
+                                const originInput = origin_inputs[i]
+                                addOutputWithTooltip(
+                                    this,
+                                    originInput?.name ?? `${_prefix}_${i + 1}`,
+                                    originInput?.type ?? "*",
+                                    TOOLTIP_UNPACK_OUTPUT
+                                )
                             }
                             for (let i = 0; i < cur_len && i < output_len; i++) {
-                                this.outputs[i].type = origin_inputs[i].type
+                                const originInput = origin_inputs[i]
+                                this.outputs[i].type = originInput?.type ?? "*"
+                                this.outputs[i].label = originInput?.name ?? `${_prefix}_${i + 1}`
+                                this.outputs[i].name = originInput?.name ?? `${_prefix}_${i + 1}`
                                 setTooltip(this.outputs[i], TOOLTIP_UNPACK_OUTPUT)
                             }
+                        }
+                    } else if (event === TypeSlotEvent.Disconnect) {
+                        const output_len = this.outputs?.length ?? 0
+                        for (let i = output_len - 1; i > 0; i--) {
+                            this.removeOutput(i)
+                        }
+                        if (this.outputs?.[0]) {
+                            this.outputs[0].type = "*"
+                            this.outputs[0].label = "*"
+                            this.outputs[0].name = "*"
+                            setTooltip(this.outputs[0], TOOLTIP_UNPACK_OUTPUT)
                         }
                     }
                 }
@@ -432,21 +524,24 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined
+                if (!this.widgets?.[0] || !this.outputs?.[0]) {
+                    return r
+                }
                 const onWidgetChanged = this.widgets[0].callback
                 const thisNode = this
-                this.widgets[0].options.values = getWorkflowTypes(app)
+                this.widgets[0].options.values = getWorkflowTypes(app, this)
                 const output_type = thisNode.widgets[0].value
                 thisNode.outputs[0].type = output_type
                 thisNode.outputs[0].label = output_type
                 thisNode.outputs[0].name = output_type
                 this.widgets[0].callback = function () {
                     const me = onWidgetChanged ? onWidgetChanged.apply(this, arguments) : undefined
-                    this.widgets[0].options.values = getWorkflowTypes(app)
+                    thisNode.widgets[0].options.values = getWorkflowTypes(app, thisNode)
                     const output_type = thisNode.widgets[0].value
                     thisNode.outputs[0].type = output_type
                     thisNode.outputs[0].label = output_type
                     thisNode.outputs[0].name = output_type
-                    return r
+                    return me
                 }
                 return r
             }
@@ -454,7 +549,10 @@ app.registerExtension({
             const onConfigure = nodeType.prototype.onConfigure
             nodeType.prototype.onConfigure = function () {
                 const r = onConfigure ? onConfigure.apply(this, arguments) : undefined
-                this.widgets[0].options.values = getWorkflowTypes(app)
+                if (!this.widgets?.[0] || !this.outputs?.[0]) {
+                    return r
+                }
+                this.widgets[0].options.values = getWorkflowTypes(app, this)
                 const output_type = this.widgets[0].value
                 this.outputs[0].type = output_type
                 this.outputs[0].label = output_type
@@ -465,15 +563,16 @@ app.registerExtension({
             nodeType.prototype.onConnectionsChange = function (slotType, slot, event, link_info, data) {
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
+                    if (!this.widgets?.[0] || !this.outputs?.[0]) {
+                        return r
+                    }
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        const origin_node = app.graph.getNodeById(link_info.origin_id)
-                        const origin_slot = origin_node.outputs[link_info.origin_slot]
-                        const origin_type = origin_slot.type
-                        this.widgets[0].options.values = getWorkflowTypes(app)
+                        const origin_type = getOriginType(this, link_info, app)
+                        this.widgets[0].options.values = getWorkflowTypes(app, this)
                         const output_type = this.widgets[0].value
                         this.outputs[0].type = output_type
                         this.outputs[0].label = output_type
-                        this.outputs[0].name = origin_type
+                        this.outputs[0].name = origin_type ?? "*"
                     } else if (event === TypeSlotEvent.Disconnect) {
                         this.outputs[0].type = "*"
                         this.outputs[0].label = "*"
@@ -522,11 +621,12 @@ app.registerExtension({
                 const r = onConnectionsChange ? onConnectionsChange.apply(this, arguments) : undefined
                 if (slotType === TypeSlot.Input) {
                     if (event === TypeSlotEvent.Connect && link_info) {
-                        const node = app.graph.getNodeById(link_info.origin_id)
-                        let origin_type = node.outputs[link_info.origin_slot].type
-                        this.outputs[0].type = origin_type
-                        this.outputs[0].label = origin_type
-                        this.outputs[0].name = origin_type
+                        const origin_type = getOriginType(this, link_info, app)
+                        if (origin_type !== undefined) {
+                            this.outputs[0].type = origin_type
+                            this.outputs[0].label = origin_type
+                            this.outputs[0].name = origin_type
+                        }
                     } else if (event === TypeSlotEvent.Disconnect) {
                         this.outputs[0].type = "*"
                         this.outputs[0].label = "*"

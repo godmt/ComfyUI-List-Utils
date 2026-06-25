@@ -5,8 +5,6 @@ import numbers
 from pathlib import Path
 
 
-VAR_PREFIX = 'value'
-
 # wildcard trick is taken from pythongossss's
 class AnyType(str):
     def __ne__(self, __value: object) -> bool:
@@ -14,6 +12,90 @@ class AnyType(str):
 
 
 ANY_TYPE = AnyType("*")
+
+
+def _unwrap_single(value):
+    if isinstance(value, (list, tuple)) and len(value) == 1:
+        return value[0]
+    return value
+
+
+def _workflow_from_extra_pnginfo(extra_pnginfo):
+    extra_pnginfo = _unwrap_single(extra_pnginfo)
+    if not isinstance(extra_pnginfo, dict):
+        return {}
+    workflow = extra_pnginfo.get("workflow", extra_pnginfo)
+    return workflow if isinstance(workflow, dict) else {}
+
+
+def _find_node(graph, node_id):
+    nodes = graph.get("nodes", []) if isinstance(graph, dict) else []
+    return next((node for node in nodes if str(node.get("id")) == str(node_id)), None)
+
+
+def _find_subgraph_definition(workflow, definition_id):
+    definitions = workflow.get("definitions", {}) if isinstance(workflow, dict) else {}
+    subgraphs = definitions.get("subgraphs", []) if isinstance(definitions, dict) else []
+    return next(
+        (subgraph for subgraph in subgraphs if str(subgraph.get("id")) == str(definition_id)),
+        None,
+    )
+
+
+def resolve_workflow_node(extra_pnginfo, unique_id):
+    """Resolve root or nested-subgraph execution IDs such as 19:84."""
+    workflow = _workflow_from_extra_pnginfo(extra_pnginfo)
+    graph = workflow
+    parts = str(_unwrap_single(unique_id)).split(":")
+    for index, node_id in enumerate(parts):
+        node = _find_node(graph, node_id)
+        if node is None:
+            return None, None
+        if index == len(parts) - 1:
+            return node, graph
+        graph = _find_subgraph_definition(workflow, node.get("type"))
+        if graph is None:
+            return None, None
+    return None, None
+
+
+def _normalize_link(link):
+    if isinstance(link, dict):
+        return link
+    if isinstance(link, (list, tuple)) and len(link) >= 5:
+        return {
+            "id": link[0],
+            "origin_id": link[1],
+            "origin_slot": link[2],
+            "target_id": link[3],
+            "target_slot": link[4],
+            "type": link[5] if len(link) > 5 else None,
+        }
+    return None
+
+
+def _find_link(graph, link_id):
+    links = graph.get("links", []) if isinstance(graph, dict) else []
+    if isinstance(links, dict):
+        link = links.get(link_id, links.get(str(link_id)))
+        return _normalize_link(link)
+    for link in links:
+        normalized = _normalize_link(link)
+        if normalized and str(normalized.get("id")) == str(link_id):
+            return normalized
+    return None
+
+
+def resolve_workflow_input(extra_pnginfo, unique_id, input_index=0):
+    node, graph = resolve_workflow_node(extra_pnginfo, unique_id)
+    inputs = node.get("inputs", []) if node else []
+    if input_index >= len(inputs):
+        return None, None, None
+    link = _find_link(graph, inputs[input_index].get("link"))
+    if not link:
+        return None, None, None
+    origin_node = _find_node(graph, link.get("origin_id"))
+    return node, origin_node, link
 
 
 class ByPassTypeTuple(tuple):
@@ -28,29 +110,33 @@ class ByPassTypeTuple(tuple):
 
 # TODO with linked sockets
 def get_input_nodes(extra_pnginfo, unique_id):
-    node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-    node = next(n for n in node_list if n["id"] == unique_id)
+    node, graph = resolve_workflow_node(extra_pnginfo, unique_id)
+    if not node:
+        return []
     input_nodes = []
-    for i, input in enumerate(node["inputs"]):
-        link_id = input["link"]
-        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
-        in_node_id, in_socket_id = link[1], link[2]
-        in_node = next(n for n in node_list if n["id"] == in_node_id)
-        input_nodes.append(in_node)
+    for input in node.get("inputs", []):
+        link_id = input.get("link")
+        link = _find_link(graph, link_id)
+        if link:
+            input_node = _find_node(graph, link.get("origin_id"))
+            if input_node:
+                input_nodes.append(input_node)
     return input_nodes
 
 
 def get_input_types(extra_pnginfo, unique_id):
-    node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-    node = next(n for n in node_list if n["id"] == unique_id)
+    node, graph = resolve_workflow_node(extra_pnginfo, unique_id)
+    if not node:
+        return []
     input_types = []
-    for i, input in enumerate(node["inputs"]):
-        link_id = input["link"]
-        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
-        in_node_id, in_socket_id = link[1], link[2]
-        in_node = next(n for n in node_list if n["id"] == in_node_id)
-        input_type = in_node["outputs"][in_socket_id]["type"]
-        input_types.append(input_type)
+    for input in node.get("inputs", []):
+        link_id = input.get("link")
+        link = _find_link(graph, link_id)
+        in_node = _find_node(graph, link.get("origin_id")) if link else None
+        origin_slot = link.get("origin_slot") if link else None
+        outputs = in_node.get("outputs", []) if in_node else []
+        if isinstance(origin_slot, int) and origin_slot < len(outputs):
+            input_types.append(outputs[origin_slot].get("type", "*"))
     return input_types
 
 
@@ -287,12 +373,7 @@ class CreateList:
     CATEGORY = "list_utils"
 
     def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        output_list = []
-        for k, v in kwargs.items():
-            if k.startswith(VAR_PREFIX):
-                output_list.append(v)
+        output_list = list(kwargs.values())
         return (output_list, )
 
 
@@ -320,12 +401,7 @@ class CreatePyList:
     CATEGORY = "list_utils"
 
     def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        output_list = []
-        for k, v in kwargs.items():
-            if k.startswith(VAR_PREFIX):
-                output_list.append(v)
+        output_list = list(kwargs.values())
         return (output_list, )
 
 
@@ -358,12 +434,9 @@ class MergeList:
         unique_id = unique_id[0]
         prompt = prompt[0]
         extra_pnginfo = extra_pnginfo[0]
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
-        for k, v in kwargs.items():
-            if k.startswith(VAR_PREFIX):
-                output_list += v
+        for v in kwargs.values():
+            output_list += v
         return (output_list, )
 
 
@@ -391,12 +464,9 @@ class MergePyList:
     CATEGORY = "list_utils"
 
     def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
         output_list = []
-        for k, v in kwargs.items():
-            if k.startswith(VAR_PREFIX):
-                output_list += v
+        for v in kwargs.values():
+            output_list += v
         return (output_list, )
 
 
@@ -521,21 +591,25 @@ class Pack:
     CATEGORY = "list_utils"
 
     def run(self, unique_id, prompt, extra_pnginfo, **kwargs):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
+        cur_node, _ = resolve_workflow_node(extra_pnginfo, unique_id)
+        input_metadata = {
+            input_info.get("name"): input_info
+            for input_info in (cur_node.get("inputs", []) if cur_node else [])
+        }
         data = {}
         pack = {
             "id": unique_id,
             "data": data,
         }
+        output_index = 0
         for k, v in kwargs.items():
-            if k.startswith(VAR_PREFIX):
-                i = int(k.split("_")[1])
-                data[i - 1] = {
-                    "name": cur_node["inputs"][i - 1]["name"],
-                    "type": cur_node["inputs"][i - 1]["type"],
-                    "value": v,
-                }
+            metadata = input_metadata.get(k, {})
+            data[output_index] = {
+                "name": metadata.get("name", k),
+                "type": metadata.get("type", "*"),
+                "value": v,
+            }
+            output_index += 1
 
         return (pack, )
 
@@ -642,13 +716,13 @@ class GetShape:
         return True
 
     def run(self, tensor, unique_id, prompt, extra_pnginfo):  
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        link_id = cur_node["inputs"][0]["link"]
-        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
-        in_node_id, in_socket_id = link[1], link[2]
-        in_node = next(n for n in node_list if n["id"] == in_node_id)
-        input_type = in_node["outputs"][in_socket_id]["type"]
+        _, in_node, link = resolve_workflow_input(extra_pnginfo, unique_id)
+        input_type = None
+        if in_node and link:
+            outputs = in_node.get("outputs", [])
+            origin_slot = link.get("origin_slot")
+            if isinstance(origin_slot, int) and origin_slot < len(outputs):
+                input_type = outputs[origin_slot].get("type")
         
         B, H, W, C = 1, 1, 1, 1
         # IMAGE: [B,H,W,C]
@@ -735,13 +809,9 @@ class GetWidgetsValues:
     OUTPUT_NODE = True
 
     def run(self, ANY, unique_id, prompt, extra_pnginfo):
-        node_list = extra_pnginfo["workflow"]["nodes"]  # list of dict including id, type
-        cur_node = next(n for n in node_list if str(n["id"]) == unique_id)
-        link_id = cur_node["inputs"][0]["link"]
-        link = next(l for l in extra_pnginfo["workflow"]["links"] if l[0] == link_id)
-        in_node_id, in_socket_id = link[1], link[2]
-        in_node = next(n for n in node_list if n["id"] == in_node_id)
-        return { "ui": {"text": (f"{in_node['widgets_values']}",)}, "result": (in_node["widgets_values"], ) }
+        _, in_node, _ = resolve_workflow_input(extra_pnginfo, unique_id)
+        widget_values = in_node.get("widgets_values", []) if in_node else []
+        return { "ui": {"text": (f"{widget_values}",)}, "result": (widget_values, ) }
 
 
 def try_cast(x, dst_type: str):
